@@ -1,0 +1,14 @@
+GRANT ALL ON public.user_roles TO authenticated;
+GRANT ALL ON public.user_roles TO service_role;
+GRANT ALL ON public.profiles TO authenticated;
+GRANT ALL ON public.profiles TO service_role;
+GRANT ALL ON public.payment_methods TO authenticated;
+GRANT ALL ON public.payment_methods TO service_role;
+GRANT ALL ON public.coupons TO authenticated;
+GRANT ALL ON public.coupons TO service_role;
+GRANT ALL ON public.orders TO authenticated;
+GRANT ALL ON public.orders TO service_role;
+GRANT ALL ON public.site_settings TO authenticated;
+GRANT ALL ON public.site_settings TO service_role;
+GRANT ALL ON public.visits TO authenticated;
+GRANT ALL ON public.visits TO service_role;

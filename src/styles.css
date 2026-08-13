@@ -1,0 +1,346 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * HIJABI BY ANAYAH multi-theme color system.
+ * 10 selectable light themes.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-brand: var(--brand);
+  --color-brand-2: var(--brand-2);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --font-display: "Playfair Display", ui-serif, Georgia, serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Base Shared tokens across all themes */
+:root {
+  --radius: 0.5rem;
+  --background: #FAF8F5;
+  --foreground: #2B2521;
+  --surface: #FFFFFF;
+  --surface-2: #F5EFE9;
+  --card: #FFFFFF;
+  --card-foreground: #2B2521;
+  --popover: #FFFFFF;
+  --popover-foreground: #2B2521;
+  --primary-foreground: #FFFFFF;
+  --brand-foreground: #FFFFFF;
+  --secondary: #F5EFE9;
+  --secondary-foreground: #2B2521;
+  --muted: #F5EFE9;
+  --muted-foreground: #7D746D;
+  --accent: #F5EFE9;
+  --accent-foreground: #2B2521;
+  --destructive: #721C24;
+  --destructive-foreground: #FFFFFF;
+  --success: #155724;
+  --warning: #CD853F;
+  --border: #E5DED5;
+  --input: #E5DED5;
+  --ring: var(--primary);
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(201, 168, 138, 0.12);
+  --shadow-premium: 0 24px 60px -28px rgba(43, 37, 33, 0.18);
+  --shadow-soft: 0 8px 30px -18px rgba(43, 37, 33, 0.14);
+  --sidebar: #2B2521;
+  --sidebar-foreground: #FAF8F5;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #3D352F;
+  --sidebar-accent-foreground: #FAF8F5;
+  --sidebar-border: rgba(255, 255, 255, 0.12);
+}
+
+/* ---------- 1. Sand (#C9A88A) ---------- */
+.theme-sand, :root {
+  --primary: #C9A88A;
+  --brand: #C9A88A;
+  --brand-2: #DBC0A5;
+  --ring: #C9A88A;
+  --sidebar-primary: #C9A88A;
+  --sidebar-ring: #C9A88A;
+}
+
+/* ---------- 2. Blush (#E8B4B8) ---------- */
+.theme-blush {
+  --primary: #E8B4B8;
+  --brand: #E8B4B8;
+  --brand-2: #F5D3D6;
+  --ring: #E8B4B8;
+  --sidebar-primary: #E8B4B8;
+  --sidebar-ring: #E8B4B8;
+}
+
+/* ---------- 3. Sage (#A8B89C) ---------- */
+.theme-sage {
+  --primary: #A8B89C;
+  --brand: #A8B89C;
+  --brand-2: #C4D1BB;
+  --ring: #A8B89C;
+  --sidebar-primary: #A8B89C;
+  --sidebar-ring: #A8B89C;
+}
+
+/* ---------- 4. Sky (#A9C6E8) ---------- */
+.theme-sky {
+  --primary: #A9C6E8;
+  --brand: #A9C6E8;
+  --brand-2: #C9D9EF;
+  --ring: #A9C6E8;
+  --sidebar-primary: #A9C6E8;
+  --sidebar-ring: #A9C6E8;
+}
+
+/* ---------- 5. Lilac (#C6B6E2) ---------- */
+.theme-lilac {
+  --primary: #C6B6E2;
+  --brand: #C6B6E2;
+  --brand-2: #E1D9F1;
+  --ring: #C6B6E2;
+  --sidebar-primary: #C6B6E2;
+  --sidebar-ring: #C6B6E2;
+}
+
+/* ---------- 6. Ivory Gold (#D9C08C) ---------- */
+.theme-ivory-gold {
+  --primary: #D9C08C;
+  --brand: #D9C08C;
+  --brand-2: #E9D8B1;
+  --ring: #D9C08C;
+  --sidebar-primary: #D9C08C;
+  --sidebar-ring: #D9C08C;
+}
+
+/* ---------- 7. Mint (#A9D8C7) ---------- */
+.theme-mint {
+  --primary: #A9D8C7;
+  --brand: #A9D8C7;
+  --brand-2: #C9E8DD;
+  --ring: #A9D8C7;
+  --sidebar-primary: #A9D8C7;
+  --sidebar-ring: #A9D8C7;
+}
+
+/* ---------- 8. Taupe (#B7A99A) ---------- */
+.theme-taupe {
+  --primary: #B7A99A;
+  --brand: #B7A99A;
+  --brand-2: #D1C7BD;
+  --ring: #B7A99A;
+  --sidebar-primary: #B7A99A;
+  --sidebar-ring: #B7A99A;
+}
+
+/* ---------- 9. Peach (#F0C9A8) ---------- */
+.theme-peach {
+  --primary: #F0C9A8;
+  --brand: #F0C9A8;
+  --brand-2: #F8DFC8;
+  --ring: #F0C9A8;
+  --sidebar-primary: #F0C9A8;
+  --sidebar-ring: #F0C9A8;
+}
+
+/* ---------- 10. Pearl Grey (#C4C7CC) ---------- */
+.theme-pearl-grey {
+  --primary: #C4C7CC;
+  --brand: #C4C7CC;
+  --brand-2: #DBDEE2;
+  --ring: #C4C7CC;
+  --sidebar-primary: #C4C7CC;
+  --sidebar-ring: #C4C7CC;
+}
+
+/* ---------- 11. Black & White (#000000) ---------- */
+.theme-black-white {
+  --primary: #000000;
+  --brand: #000000;
+  --brand-2: #333333;
+  --ring: #000000;
+  --sidebar-primary: #000000;
+  --sidebar-ring: #000000;
+}
+
+/* ---------- 12. Blue & White (#0000FF) ---------- */
+.theme-blue-white {
+  --primary: #0000FF;
+  --brand: #0000FF;
+  --brand-2: #4D4DFF;
+  --ring: #0000FF;
+  --sidebar-primary: #0000FF;
+  --sidebar-ring: #0000FF;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    width: 100%;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+}
+
+@utility glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid var(--glass-border);
+}
+
+@utility shadow-premium {
+  box-shadow: var(--shadow-premium);
+}
+
+@utility shadow-soft {
+  box-shadow: var(--shadow-soft);
+}
+
+@utility premium-card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-soft);
+  transition:
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.35s ease,
+    box-shadow 0.35s ease;
+  &:hover {
+    transform: translateY(-6px);
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-premium);
+  }
+}
+
+@utility marquee-track {
+  animation: marquee 28s linear infinite;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, -28px, 0) scale(1.06);
+  }
+}
+
+@utility float-slow {
+  animation: float-slow 12s ease-in-out infinite;
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 var(--color-brand);
+    opacity: 0.5;
+  }
+  100% {
+    box-shadow: 0 0 0 22px transparent;
+    opacity: 0;
+  }
+}
+
+@utility pulse-ring {
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Hide Lovable badge */
+a[href*="lovable.app"],
+[class*="lovable-badge"],
+#lovable-badge {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  height: 0 !important;
+  width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  position: absolute !important;
+}

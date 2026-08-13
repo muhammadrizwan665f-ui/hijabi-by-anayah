@@ -1,0 +1,645 @@
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { useState } from "react";
+import { motion } from "motion/react";
+import {
+  BadgeCheck,
+  Check,
+  Heart,
+  RotateCcw,
+  Share2,
+  ShieldCheck,
+  Star,
+  Truck,
+  Zap,
+} from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Countdown } from "@/components/site/countdown";
+import { ProductCard } from "@/components/site/product-card";
+import { Reveal } from "@/components/site/reveal";
+import { bulkDiscountFor, discountPct, formatPKR, lineTotal, unitPrice } from "@/lib/pricing";
+import { useStore } from "@/lib/store";
+import { useServerFn } from "@tanstack/react-start";
+import { submitReviewFn } from "@/lib/reviews.functions";
+
+export const Route = createFileRoute("/product/$slug")({
+  head: ({ params }) => ({
+    meta: [
+      { title: `${params.slug.replace(/-/g, " ")} — Hijabi By Anayah` },
+      {
+        name: "description",
+        content:
+          "Premium Anayah modest wear with offer pricing, bundle discounts and cash on delivery across Pakistan.",
+      },
+      { property: "og:type", content: "product" },
+      { property: "og:url", content: `/product/${params.slug}` },
+    ],
+    links: [{ rel: "canonical", href: `/product/${params.slug}` }],
+  }),
+  component: ProductPage,
+});
+
+function ProductPage() {
+  const { slug } = Route.useParams();
+  const { products, payments, addToCart, wishlist, toggleWishlist, settings } = useStore();
+  const product = products.find((p) => p.slug === slug);
+  const [qty, setQty] = useState(1);
+  const [img, setImg] = useState(0);
+  const [colorIdx, setColorIdx] = useState<number | null>(null);
+
+  if (!product) throw notFound();
+
+  const colors = (product.colors ?? []).filter((c) => c.images.length > 0 || c.name);
+  const activeColor = colorIdx === null ? null : (colors[colorIdx] ?? null);
+  const gallery =
+    activeColor && activeColor.images.length > 0 ? activeColor.images : product.images;
+
+  const t = lineTotal(product, qty);
+  const off = discountPct(product);
+  const related = products.filter((p) => p.id !== product.id && p.active).slice(0, 4);
+  const wished = wishlist.includes(product.id);
+  const bestPay = payments.filter((p) => p.enabled).sort((a, b) => b.discountPct - a.discountPct)[0];
+  const outOfStock = product.stock <= 0;
+  const lowStock = product.stock > 0 && product.stock <= (settings.lowStockThreshold || 5);
+
+  const waText = encodeURIComponent(
+    `Assalam o Alaikum! I want to order: ${product.name} (Qty ${qty}) — ${formatPKR(t.total)}`,
+  );
+
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-10">
+      <nav className="text-sm text-muted-foreground">
+        <Link to="/" className="hover:text-primary">
+          Home
+        </Link>{" "}
+        /{" "}
+        <Link to="/shop" className="hover:text-primary">
+          Shop
+        </Link>{" "}
+        / <span className="text-foreground">{product.name}</span>
+      </nav>
+
+      <div className="mt-6 grid gap-10 lg:grid-cols-2">
+        <div>
+          <motion.div
+            key={`${activeColor?.name ?? "all"}-${img}`}
+            initial={{ opacity: 0.4, scale: 1.02 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="premium-card group overflow-hidden p-0"
+          >
+            <img
+              src={gallery[img] ?? gallery[0]}
+              alt={activeColor ? `${product.name} — ${activeColor.name}` : product.name}
+              width={1024}
+              height={1024}
+              className="aspect-square w-full object-cover transition-transform duration-700 group-hover:scale-125"
+            />
+          </motion.div>
+          <div className="no-scrollbar mt-4 flex gap-3 overflow-x-auto pb-2 sm:flex-wrap sm:overflow-visible">
+            {gallery.map((src, i) => (
+              <button
+                key={`${src}-${i}`}
+                onClick={() => setImg(i)}
+                aria-label={`View image ${i + 1}`}
+                className={`size-20 shrink-0 overflow-hidden rounded-2xl border-2 sm:shrink ${i === img ? "border-primary" : "border-border"}`}
+              >
+                <img src={src} alt="" loading="lazy" className="size-full object-cover" />
+              </button>
+            ))}
+          </div>
+
+          {colors.length > 0 ? (
+            <div className="mt-5">
+              <p className="text-sm font-semibold">
+                Colour:{" "}
+                <span className="font-normal text-muted-foreground">
+                  {activeColor ? activeColor.name : "All"}
+                </span>
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => {
+                    setColorIdx(null);
+                    setImg(0);
+                  }}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                    colorIdx === null ? "border-primary text-primary" : "border-border"
+                  }`}
+                >
+                  All
+                </button>
+                {colors.map((c, i) => (
+                  <button
+                    key={`${c.name}-${i}`}
+                    onClick={() => {
+                      setColorIdx(i);
+                      setImg(0);
+                    }}
+                    title={c.name}
+                    aria-label={c.name}
+                    className={`flex items-center gap-2 rounded-full border px-2 py-1.5 pr-3 text-xs font-medium transition-colors ${
+                      colorIdx === i ? "border-primary text-primary" : "border-border"
+                    }`}
+                  >
+                    <span
+                      className="size-5 rounded-full border border-border"
+                      style={{ backgroundColor: c.hex || "#C9A88A" }}
+                    />
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div>
+          <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible">
+            {product.badges.map((b) => (
+              <span
+                key={b}
+                className="shrink-0 rounded-full border border-primary px-3 py-1 text-xs font-bold text-primary sm:shrink bg-surface"
+              >
+                {b}
+              </span>
+            ))}
+          </div>
+
+          <h1 className="mt-3 text-3xl font-bold sm:text-4xl">{product.name}</h1>
+          <p className="mt-2 text-muted-foreground">{product.tagline}</p>
+
+          <div className="mt-3 flex items-center gap-2 text-sm">
+            <div className="flex">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Star
+                  key={i}
+                  className={`size-4 ${i < Math.round(product.rating) ? "fill-warning text-warning" : "text-muted-foreground"}`}
+                />
+              ))}
+            </div>
+            <span className="font-semibold">{product.rating}</span>
+            <span className="text-muted-foreground">· {product.sold.toLocaleString()} sold</span>
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className="font-display text-4xl font-bold text-primary">
+              {formatPKR(unitPrice(product))}
+            </span>
+            {product.salePrice ? (
+              <div className="flex items-center gap-2">
+                <span className="text-lg text-muted-foreground line-through">
+                  {formatPKR(product.price)}
+                </span>
+                <span className="rounded-full border border-primary px-2.5 py-1 text-[10px] font-bold text-primary uppercase tracking-tight bg-surface">
+                  Save {off}%
+                </span>
+              </div>
+            ) : null}
+          </div>
+
+          {product.flashSale && product.flashEndsAt ? (
+            <div className="mt-5 rounded-2xl border border-destructive/40 bg-destructive/10 p-4">
+              <p className="flex items-center gap-1.5 text-sm font-bold text-destructive">
+                <Zap className="size-4" /> Flash sale ends in
+              </p>
+              <div className="mt-2">
+                <Countdown target={product.flashEndsAt} />
+              </div>
+            </div>
+          ) : null}
+
+          {outOfStock ? (
+            <p className="mt-4 text-sm font-semibold text-destructive">Out of Stock</p>
+          ) : lowStock ? (
+            <p className="mt-4 text-sm">
+              <span className="font-semibold text-destructive">
+                Only {product.stock} left in stock
+              </span>{" "}
+              · live stock counter
+            </p>
+          ) : (
+            <p className="mt-4 text-sm text-muted-foreground">In stock · ready to ship</p>
+          )}
+
+          {/* Bulk discount box */}
+          <div className="premium-card mt-6 p-5">
+            <h2 className="font-display font-bold">Buy more, save more</h2>
+            <div className="mt-3 flex flex-col gap-2 sm:grid sm:grid-cols-3">
+              {product.bulkRules.map((r) => {
+                const activeRule = bulkDiscountFor(product.bulkRules, qty)?.minQty === r.minQty;
+                return (
+                  <button
+                    key={r.minQty}
+                    onClick={() => setQty(r.minQty)}
+                    className={`min-h-[60px] rounded-2xl border p-3 text-left transition-colors ${activeRule ? "border-primary bg-surface shadow-sm" : "border-border"}`}
+                  >
+                    <p className="font-display font-bold">Buy {r.minQty}</p>
+                    <p className="text-xs text-success">{r.discountPct}% off</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Payment discount box */}
+          <div className="premium-card mt-4 p-5">
+            <h2 className="font-display font-bold">Payment discounts</h2>
+            <ul className="mt-3 space-y-2 text-sm">
+              {payments
+                .filter((p) => p.enabled)
+                .map((p) => (
+                  <li key={p.id} className="flex items-center justify-between gap-3">
+                    <span>
+                      {p.label}{" "}
+                      <span className="text-xs text-muted-foreground">— {p.note}</span>
+                    </span>
+                    <span className="font-semibold text-success">{p.discountPct}% off</span>
+                  </li>
+                ))}
+            </ul>
+          </div>
+
+          <div className="mt-6 flex items-center gap-3">
+            <div className="flex items-center gap-1 rounded-full border border-border p-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-9 rounded-full"
+                aria-label="Decrease quantity"
+                onClick={() => setQty((q) => Math.max(1, q - 1))}
+              >
+                −
+              </Button>
+              <span className="w-8 text-center font-semibold tabular-nums">{qty}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-9 rounded-full"
+                aria-label="Increase quantity"
+                onClick={() => setQty((q) => q + 1)}
+              >
+                +
+              </Button>
+            </div>
+            <p className="text-sm">
+              Total:{" "}
+              <span className="font-display text-lg font-bold">{formatPKR(t.total)}</span>
+              {t.bulk > 0 ? (
+                <span className="ml-1 text-xs font-semibold text-success">
+                  (saved {formatPKR(t.bulk)})
+                </span>
+              ) : null}
+            </p>
+          </div>
+
+          {lowStock ? (
+            <p className="mt-4 text-xs font-semibold text-destructive">
+              Only {product.stock} left in stock
+            </p>
+          ) : null}
+
+          <div className="mt-5 flex flex-col gap-3 sm:grid sm:grid-cols-2">
+            <Button
+              size="lg"
+              className="h-12 w-full text-base sm:h-11 sm:text-sm"
+              disabled={outOfStock}
+              onClick={() => {
+                if (outOfStock) return;
+                addToCart(product.id, qty);
+                toast.success("Added to cart", { description: product.name });
+              }}
+            >
+              {outOfStock ? "Out of Stock" : "Add to Cart"}
+            </Button>
+            {outOfStock ? (
+              <Button size="lg" variant="secondary" className="h-12 w-full text-base sm:h-11 sm:text-sm" disabled>
+                Buy Now
+              </Button>
+            ) : (
+              <Button size="lg" variant="secondary" className="h-12 w-full text-base sm:h-11 sm:text-sm" asChild>
+                <Link to="/checkout" onClick={() => addToCart(product.id, qty)}>
+                  Buy Now
+                </Link>
+              </Button>
+            )}
+            <a
+              href={`https://wa.me/${settings.whatsapp}?text=${waText}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex h-12 items-center justify-center gap-2 rounded-xl bg-success px-4 py-3 font-semibold text-background transition-transform hover:scale-[1.02] sm:col-span-2 sm:h-11"
+            >
+              Order on WhatsApp
+            </a>
+          </div>
+
+          <div className="mt-5 flex gap-3">
+            <Button variant="ghost" onClick={() => toggleWishlist(product.id)}>
+              <Heart className={`mr-1.5 size-4 ${wished ? "fill-destructive text-destructive" : ""}`} />
+              {wished ? "In wishlist" : "Add to wishlist"}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                void navigator.clipboard?.writeText(window.location.href);
+                toast.success("Link copied");
+              }}
+            >
+              <Share2 className="mr-1.5 size-4" /> Share
+            </Button>
+          </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            {[
+              { Icon: Truck, t: "1-3 day delivery" },
+              { Icon: ShieldCheck, t: product.warranty },
+              { Icon: RotateCcw, t: "7-day replacement" },
+            ].map(({ Icon, t: text }) => (
+              <div
+                key={text}
+                className="flex items-center gap-2 rounded-2xl border border-primary/20 bg-surface p-3 text-xs"
+              >
+                <Icon className="size-4 shrink-0 text-primary" /> {text}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* DETAILS */}
+      <Tabs 
+        defaultValue={
+          product.features.length > 0 ? "features" : 
+          product.specs.length > 0 ? "specs" : 
+          product.included.length > 0 ? "included" : 
+          "reviews"
+        } 
+        className="mt-16"
+      >
+        <TabsList className="no-scrollbar flex w-full justify-start overflow-x-auto pb-1 sm:justify-center">
+          {product.features.length > 0 && <TabsTrigger value="features" className="shrink-0">Features</TabsTrigger>}
+          {product.specs.length > 0 && <TabsTrigger value="specs" className="shrink-0">Specifications</TabsTrigger>}
+          {product.included.length > 0 && <TabsTrigger value="included" className="shrink-0">What's Included</TabsTrigger>}
+          <TabsTrigger value="reviews" className="shrink-0">Reviews ({product.reviews.length})</TabsTrigger>
+          {product.faqs.length > 0 && <TabsTrigger value="faq" className="shrink-0">FAQs</TabsTrigger>}
+        </TabsList>
+
+        {product.features.length > 0 && (
+          <TabsContent value="features" className="premium-card mt-5 p-6">
+            <p className="text-muted-foreground">{product.description}</p>
+            <ul className="mt-5 grid gap-2.5 sm:grid-cols-2">
+              {product.features.map((f) => (
+                <li key={f} className="flex items-start gap-2 text-sm">
+                  <Check className="mt-0.5 size-4 shrink-0 text-primary" /> {f}
+                </li>
+              ))}
+            </ul>
+          </TabsContent>
+        )}
+
+        {product.specs.length > 0 && (
+          <TabsContent value="specs" className="premium-card mt-5 p-6">
+            <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
+              {product.specs.map((s) => (
+                <div key={s.label} className="flex justify-between gap-4 border-b border-primary/10 pb-2 text-sm">
+                  <dt className="text-muted-foreground">{s.label}</dt>
+                  <dd className="font-medium">{s.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </TabsContent>
+        )}
+
+        {product.included.length > 0 && (
+          <TabsContent value="included" className="premium-card mt-5 p-6">
+            <ul className="space-y-2.5">
+              {product.included.map((i) => (
+                <li key={i} className="flex items-center gap-2 text-sm">
+                  <BadgeCheck className="size-4 text-primary" /> {i}
+                </li>
+              ))}
+            </ul>
+          </TabsContent>
+        )}
+
+        <TabsContent value="reviews" className="mt-5 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <h3 className="font-display text-xl font-bold">Customer Feedback</h3>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button>Write a Review</Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[500px]">
+                <ReviewForm productId={product.id} onComplete={() => window.location.reload()} />
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {product.reviews.length === 0 ? (
+            <p className="premium-card p-6 text-muted-foreground">
+              No reviews yet — be the first to review this product.
+            </p>
+          ) : (
+            <div className="no-scrollbar -mx-4 flex gap-4 overflow-x-auto px-4 pb-4 sm:mx-0 sm:grid sm:overflow-visible sm:px-0 sm:pb-0">
+              {product.reviews.map((r) => (
+                <div key={r.id} className="premium-card w-[85vw] shrink-0 p-6 sm:w-full">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-display font-semibold">{r.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {r.name} · {r.city} · {r.date && !isNaN(new Date(r.date).getTime()) ? new Date(r.date).toLocaleDateString() : "Recently"}
+                        {r.verified ? (
+                          <span className="ml-1 font-semibold text-primary">Verified purchase</span>
+                        ) : null}
+                      </p>
+                    </div>
+                    <div className="flex">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star 
+                          key={i} 
+                          className={`size-4 ${i < r.rating ? "fill-warning text-warning" : "text-muted-foreground/30"}`} 
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="mt-3 text-sm text-muted-foreground">{r.body}</p>
+                  {r.adminReply ? (
+                    <p className="mt-3 rounded-2xl bg-surface border border-primary/10 p-3 text-sm">
+                      <span className="font-semibold">Hijabi By Anayah:</span> {r.adminReply}
+                    </p>
+                  ) : null}
+                  <p className="mt-3 text-xs text-muted-foreground">{r.helpful} people found this helpful</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {product.faqs.length > 0 && (
+          <TabsContent value="faq" className="premium-card mt-5 p-6">
+            <Accordion type="single" collapsible>
+              {product.faqs.map((f, i) => (
+                <AccordionItem key={f.q} value={`f${i}`}>
+                  <AccordionTrigger>{f.q}</AccordionTrigger>
+                  <AccordionContent>{f.a}</AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </TabsContent>
+        )}
+      </Tabs>
+
+      <section className="mt-20">
+        <h2 className="text-2xl font-bold">You may also like</h2>
+        <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {related.map((p, i) => (
+            <ProductCard key={p.id} product={p} index={i} />
+          ))}
+        </div>
+      </section>
+
+      {/* Sticky mobile buy bar */}
+      <Reveal className="fixed inset-x-0 bottom-0 z-40 lg:hidden">
+        <div className="glass flex items-center gap-3 border-t border-primary/20 p-3 pb-safe-bottom">
+          <div className="flex-1 min-w-0">
+            <p className="font-display text-base font-bold leading-tight truncate sm:text-lg">{formatPKR(t.total)}</p>
+            {outOfStock ? (
+              <p className="text-[10px] font-semibold text-destructive leading-tight sm:text-[11px]">Out of Stock</p>
+            ) : lowStock ? (
+              <p className="text-[10px] font-semibold text-destructive leading-tight sm:text-[11px]">Only {product.stock} left</p>
+            ) : bestPay ? (
+              <p className="text-[10px] text-success leading-tight sm:text-[11px]">Save {bestPay.discountPct}% on advance</p>
+            ) : null}
+          </div>
+          <Button
+            size="sm"
+            className="h-10 px-3 text-xs sm:h-11 sm:px-4 sm:text-sm"
+            disabled={outOfStock}
+            onClick={() => {
+              if (outOfStock) return;
+              addToCart(product.id, qty);
+              toast.success("Added to cart");
+            }}
+          >
+            Add
+          </Button>
+          {outOfStock ? (
+            <Button variant="secondary" size="sm" className="h-10 px-3 text-xs sm:h-11 sm:px-4 sm:text-sm" disabled>
+              Buy Now
+            </Button>
+          ) : (
+            <Button variant="secondary" size="sm" className="h-10 px-3 text-xs sm:h-11 sm:px-4 sm:text-sm" asChild>
+              <Link to="/checkout" onClick={() => addToCart(product.id, qty)}>
+                Buy Now
+              </Link>
+            </Button>
+          )}
+        </div>
+      </Reveal>
+    </div>
+  );
+}
+
+function ReviewForm({ productId, onComplete }: { productId: string; onComplete: () => void }) {
+  const submitReview = useServerFn(submitReviewFn);
+  const [loading, setLoading] = useState(false);
+  const [rating, setRating] = useState(5);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    const fd = new FormData(e.currentTarget);
+    try {
+      await submitReview({
+        data: {
+          productId,
+          review: {
+            name: fd.get("name") as string,
+            city: fd.get("city") as string,
+            rating,
+            title: fd.get("title") as string,
+            body: fd.get("body") as string,
+          },
+        },
+      });
+      toast.success("Review submitted! Thank you for your feedback.");
+      onComplete();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to submit review");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <DialogHeader>
+        <DialogTitle>Write a Review</DialogTitle>
+        <DialogDescription>
+          Share your experience with other customers.
+        </DialogDescription>
+      </DialogHeader>
+      <div className="grid gap-4 py-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Full Name</Label>
+            <Input id="name" name="name" placeholder="E.g. Ayesha Khan" required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="city">City</Label>
+            <Input id="city" name="city" placeholder="E.g. Lahore" required />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label>Rating</Label>
+          <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setRating(s)}
+                className="transition-transform active:scale-90"
+              >
+                <Star
+                  className={`size-6 ${s <= rating ? "fill-warning text-warning" : "text-muted-foreground/30"}`}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="title">Review Title</Label>
+          <Input id="title" name="title" placeholder="Summary of your experience" required />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="body">Your Review</Label>
+          <Textarea
+            id="body"
+            name="body"
+            placeholder="What did you like or dislike?"
+            className="min-h-[100px]"
+            required
+          />
+        </div>
+      </div>
+      <DialogFooter>
+        <Button type="submit" disabled={loading} className="w-full sm:w-auto">
+          {loading ? "Submitting..." : "Post Review"}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+}
