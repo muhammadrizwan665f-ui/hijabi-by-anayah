@@ -1,6 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useMemo } from "react";
-import brandLogo from "@/assets/hijabi-logo.png.asset.json";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ChevronUp,
@@ -136,10 +135,11 @@ export function Header() {
 
           <Link to="/" className="flex items-center gap-2">
             <img
-              src={brandLogo.url}
+              src="/favicon.png"
               alt="Hijabi By Anayah logo"
-              className="h-11 w-auto"
+              className="h-11 w-11 rounded-full object-cover"
             />
+            <span className="hidden font-display text-lg font-bold tracking-tight sm:inline">Hijabi By Anayah</span>
           </Link>
 
           <nav className="ml-6 hidden items-center gap-1 lg:flex">

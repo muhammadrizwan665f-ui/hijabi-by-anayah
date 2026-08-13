@@ -1,5 +1,4 @@
 import { Link } from "@tanstack/react-router";
-import brandLogo from "@/assets/hijabi-logo.png.asset.json";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import {
@@ -63,7 +62,8 @@ export function Footer() {
         <div className="grid gap-10 md:grid-cols-4">
           <div>
             <div className="flex items-center gap-2">
-              <img src={brandLogo.url} alt="Hijabi By Anayah logo" className="h-14 w-auto" />
+              <img src="/favicon.png" alt="Hijabi By Anayah logo" className="h-14 w-14 rounded-full object-cover" />
+              <span className="font-display text-lg font-bold tracking-tight">Hijabi By Anayah</span>
             </div>
             <p className="mt-4 text-sm text-muted-foreground">{settings.tagline}</p>
             <div className="mt-4 flex gap-2">
