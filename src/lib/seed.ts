@@ -59,17 +59,17 @@ export const SEED_SETTINGS: Settings = {
   privacyPolicy: "We protect your data.",
   heroSlides: [
     {
-      image: "/products/banner-hijabs.jpg",
+      image: "/products/banner-general-wide.jpg",
       mobileImage: "/products/banner-hijabs.jpg",
       link: "/shop",
     },
     {
-      image: "/products/banner-abayas.jpg",
+      image: "/products/banner-abayas-wide.jpg",
       mobileImage: "/products/banner-abayas.jpg",
       link: "/shop",
     },
     {
-      image: "/products/banner-accessories.jpg",
+      image: "/products/banner-accessories-wide.jpg",
       mobileImage: "/products/banner-accessories.jpg",
       link: "/shop",
     },
