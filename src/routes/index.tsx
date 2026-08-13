@@ -57,7 +57,7 @@ function Home() {
     ? settings.heroSlides
     : [
         {
-          image: "/__l5e/assets-v1/b2a10de9-008d-49a7-80e4-df6c5e8b4271/banner-8.jpg",
+          image: "/products/hero.jpg",
           title: "Modesty, softly refined",
           subtitle:
             "Hijabs, namaz chadars and accessories chosen for their drape, weight and finish — made for everyday wear, delivered anywhere in Pakistan with cash on delivery.",
