@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { rowToCoupon, rowToOrder, rowToPayment, rowToProduct, toSettings } from "./mappers";
+import { rowToOrder, rowToPayment, rowToProduct, toSettings } from "./mappers";
 import { computeTotals, lineTotal } from "./pricing";
 
 const cartSchema = z.object({
@@ -9,10 +9,11 @@ const cartSchema = z.object({
     .min(1)
     .max(40),
   paymentCode: z.string().trim().min(2).max(40),
-  couponCode: z.string().trim().max(40).optional(),
+  
   screenshot: z
     .object({ dataUrl: z.string().max(6_000_000), name: z.string().max(200) })
     .optional(),
+  urgent: z.boolean().optional(),
   customer: z.object({
     fullName: z.string().trim().min(3).max(80),
     phone: z.string().trim().min(10).max(20),
@@ -34,16 +35,14 @@ const PUBLIC_PAYMENT_COLUMNS =
 export const getStorefront = createServerFn({ method: "GET" }).handler(async () => {
   const { getPublicClient } = await import("./db.server");
   const supabase = getPublicClient();
-  const [products, payments, coupons, settings] = await Promise.all([
+  const [products, payments, settings] = await Promise.all([
     supabase.from("products").select("*").eq("active", true).order("sort_order"),
     supabase.from("payment_methods").select(PUBLIC_PAYMENT_COLUMNS).eq("enabled", true).order("sort_order"),
-    supabase.from("coupons").select("*").eq("active", true),
     supabase.from("site_settings").select("data").maybeSingle(),
   ]);
   return {
     products: (products.data ?? []).map(rowToProduct),
     payments: (payments.data ?? []).map((r) => rowToPayment(r as Record<string, unknown>)),
-    coupons: (coupons.data ?? []).map(rowToCoupon),
     settings: toSettings(settings.data?.data),
   };
 });
@@ -120,31 +119,15 @@ export const createOrder = createServerFn({ method: "POST" })
       .filter((l): l is { product: (typeof products)[number]; qty: number } => Boolean(l.product));
     if (lines.length === 0) throw new Error("Your cart items are no longer available.");
 
-    let couponPct = 0;
-    let couponCode: string | null = null;
-    if (data.couponCode) {
-      const { data: c } = await pub
-        .from("coupons")
-        .select("*")
-        .eq("code", data.couponCode.toUpperCase())
-        .eq("active", true)
-        .maybeSingle();
-      if (c) {
-        const coupon = rowToCoupon(c as Record<string, unknown>);
-        const goods = lines.reduce((a, l) => a + lineTotal(l.product, l.qty).total, 0);
-        if (goods >= coupon.minOrder) {
-          couponPct = coupon.discountPct;
-          couponCode = coupon.code;
-        }
-      }
-    }
 
     const totals = computeTotals({
       lines,
       method,
-      couponPct,
+      couponPct: 0,
       settings,
       province: data.customer.province,
+      city: data.customer.city,
+      urgent: !!data.urgent,
     });
 
     const orderNo = newOrderNo();
@@ -208,7 +191,7 @@ export const createOrder = createServerFn({ method: "POST" })
           };
         }),
         payment_method_code: method.id,
-        coupon: couponCode,
+        coupon: null,
         subtotal: totals.subtotal,
         bulk_discount: totals.bulkDiscount,
         coupon_discount: totals.couponDiscount,
@@ -220,6 +203,7 @@ export const createOrder = createServerFn({ method: "POST" })
         payment_status: paymentStatus,
         payment_screenshot_path: screenshotPath,
         timeline: [{ status, at: now }],
+        urgent: totals.isUrgent ?? false,
       })
       .select("*")
       .single();

@@ -20,7 +20,6 @@ import { Route as DealsRouteImport } from './routes/deals'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as TrackRouteImport } from './routes/track'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
-import { Route as AdminCouponsRouteImport } from './routes/admin.coupons'
 import { Route as AdminCustomersRouteImport } from './routes/admin.customers'
 import { Route as AdminInventoryRouteImport } from './routes/admin.inventory'
 import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
@@ -86,11 +85,6 @@ const TrackRoute = TrackRouteImport.update({
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminCouponsRoute = AdminCouponsRouteImport.update({
-  id: '/coupons',
-  path: '/coupons',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminCustomersRoute = AdminCustomersRouteImport.update({
@@ -160,7 +154,6 @@ export interface FileRoutesByFullPath {
   '/deals': typeof DealsRoute
   '/shop': typeof ShopRoute
   '/track': typeof TrackRoute
-  '/admin/coupons': typeof AdminCouponsRoute
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/inventory': typeof AdminInventoryRoute
   '/admin/orders': typeof AdminOrdersRoute
@@ -184,7 +177,6 @@ export interface FileRoutesByTo {
   '/deals': typeof DealsRoute
   '/shop': typeof ShopRoute
   '/track': typeof TrackRoute
-  '/admin/coupons': typeof AdminCouponsRoute
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/inventory': typeof AdminInventoryRoute
   '/admin/orders': typeof AdminOrdersRoute
@@ -210,7 +202,6 @@ export interface FileRoutesById {
   '/deals': typeof DealsRoute
   '/shop': typeof ShopRoute
   '/track': typeof TrackRoute
-  '/admin/coupons': typeof AdminCouponsRoute
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/inventory': typeof AdminInventoryRoute
   '/admin/orders': typeof AdminOrdersRoute
@@ -237,7 +228,6 @@ export interface FileRouteTypes {
     | '/deals'
     | '/shop'
     | '/track'
-    | '/admin/coupons'
     | '/admin/customers'
     | '/admin/inventory'
     | '/admin/orders'
@@ -261,7 +251,6 @@ export interface FileRouteTypes {
     | '/deals'
     | '/shop'
     | '/track'
-    | '/admin/coupons'
     | '/admin/customers'
     | '/admin/inventory'
     | '/admin/orders'
@@ -286,7 +275,6 @@ export interface FileRouteTypes {
     | '/deals'
     | '/shop'
     | '/track'
-    | '/admin/coupons'
     | '/admin/customers'
     | '/admin/inventory'
     | '/admin/orders'
@@ -395,13 +383,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/coupons': {
-      id: '/admin/coupons'
-      path: '/coupons'
-      fullPath: '/admin/coupons'
-      preLoaderRoute: typeof AdminCouponsRouteImport
-      parentRoute: typeof AdminRoute
-    }
     '/admin/customers': {
       id: '/admin/customers'
       path: '/customers'
@@ -483,7 +464,6 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
-  AdminCouponsRoute: typeof AdminCouponsRoute
   AdminCustomersRoute: typeof AdminCustomersRoute
   AdminInventoryRoute: typeof AdminInventoryRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
@@ -496,7 +476,6 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
-  AdminCouponsRoute: AdminCouponsRoute,
   AdminCustomersRoute: AdminCustomersRoute,
   AdminInventoryRoute: AdminInventoryRoute,
   AdminOrdersRoute: AdminOrdersRoute,

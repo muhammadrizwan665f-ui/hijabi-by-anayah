@@ -20,6 +20,7 @@ import {
   deleteProductFn,
   duplicateProductFn,
   saveProduct,
+  saveSettings,
   uploadProductImage,
 } from "@/lib/admin.functions";
 import type { Product, ProductColor } from "@/lib/types";
@@ -55,7 +56,7 @@ function blankProduct(sortOrder: number): Product {
     features: [],
     specs: [],
     included: [],
-    warranty: "7-day exchange on unworn pieces",
+    warranty: "3-day exchange on unworn pieces",
     shippingDetails: "Delivery in 2–4 working days across Pakistan.",
     flashSale: false,
     flashEndsAt: null,
@@ -109,6 +110,16 @@ function AdminProducts() {
   const upsertProduct = async (product: Product) => {
     setSaving(true);
     try {
+      // If category is new, sync it to site settings first
+      const isNewCategory = !categories.includes(product.category);
+      if (isNewCategory && product.category) {
+        const nextCategories = [
+          ...(settings.categories || []),
+          { name: product.category, slug: slugify(product.category), image: "" },
+        ];
+        await saveSettings({ data: { settings: { ...settings, categories: nextCategories } } });
+      }
+
       await saveProduct({ data: { product } });
       await reload();
       return true;
@@ -140,7 +151,7 @@ function AdminProducts() {
         <div>
           <h1 className="text-2xl font-bold sm:text-3xl">Products</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Add new products, edit prices, stock, flash sale timers and bulk discount rules —
+            Add new products, edit prices, stock and flash sale timers —
             changes apply to the storefront instantly.
           </p>
         </div>
@@ -163,17 +174,17 @@ function AdminProducts() {
             saving={saving}
             categories={categories}
             submitLabel="Create product"
-            onSubmit={async () => {
-              const name = creating.name.trim();
+            onSubmit={async (p) => {
+              const name = p.name.trim();
               if (!name) {
                 toast.error("Please add a product name.");
                 return;
               }
               const product: Product = {
-                ...creating,
+                ...p,
                 name,
-                slug: creating.slug.trim() || slugify(name),
-                sku: creating.sku.trim() || `AUD-${Date.now().toString(36).toUpperCase().slice(-5)}`,
+                slug: p.slug.trim() || slugify(name),
+                sku: p.sku.trim() || `AUD-${Date.now().toString(36).toUpperCase().slice(-5)}`,
               };
               const ok = await upsertProduct(product);
               if (ok) {
@@ -324,8 +335,8 @@ function AdminProducts() {
                 saving={saving}
                 categories={categories}
                 submitLabel="Save changes"
-                onSubmit={async () => {
-                  const ok = await upsertProduct(editing);
+                onSubmit={async (p) => {
+                  const ok = await upsertProduct(p);
                   if (ok) {
                     toast.success("Product updated");
                     setEditing(null);
@@ -350,7 +361,7 @@ function ProductForm({
 }: {
   value: Product;
   onChange: (p: Product) => void;
-  onSubmit: () => void | Promise<void>;
+  onSubmit: (p: Product) => void | Promise<void>;
   saving: boolean;
   submitLabel: string;
   categories?: string[];
@@ -421,12 +432,14 @@ function ProductForm({
     }
   };
 
+  const [newCategoryName, setNewCategoryName] = useState("");
+
   return (
     <form
       className="mt-5 grid gap-4 border-t border-border pt-5 sm:grid-cols-2"
       onSubmit={(e) => {
         e.preventDefault();
-        void onSubmit();
+        void onSubmit(value);
       }}
     >
       <div>
@@ -439,13 +452,19 @@ function ProductForm({
       </div>
       <div>
         <Label>Category</Label>
-        <div className="mt-1.5 flex gap-2">
+        <div className="mt-1.5 flex flex-col gap-2">
           <Select
-            value={value.category}
-            onValueChange={(v) => onChange({ ...value, category: v })}
+            value={categories.includes(value.category) ? value.category : "NEW_CATEGORY"}
+            onValueChange={(v) => {
+              if (v === "NEW_CATEGORY") {
+                onChange({ ...value, category: "" });
+              } else {
+                onChange({ ...value, category: v });
+              }
+            }}
           >
-            <SelectTrigger className="flex-1">
-              <SelectValue placeholder="Select or type category" />
+            <SelectTrigger>
+              <SelectValue placeholder="Select category" />
             </SelectTrigger>
             <SelectContent>
               {categories.map((c) => (
@@ -456,15 +475,12 @@ function ProductForm({
               <SelectItem value="NEW_CATEGORY">+ Add New Category</SelectItem>
             </SelectContent>
           </Select>
-          {value.category === "NEW_CATEGORY" && (
+          {!categories.includes(value.category) && (
             <Input
               autoFocus
               placeholder="Enter new category name"
-              onBlur={(e) => {
-                const val = e.target.value.trim();
-                if (val) onChange({ ...value, category: val });
-                else onChange({ ...value, category: "" });
-              }}
+              value={value.category}
+              onChange={(e) => onChange({ ...value, category: e.target.value })}
             />
           )}
         </div>
@@ -522,6 +538,33 @@ function ProductForm({
           className="mt-1.5"
           value={value.sold}
           onChange={(e) => onChange({ ...value, sold: Number(e.target.value) })}
+        />
+      </div>
+      <div>
+        <Label>Size</Label>
+        <Input
+          className="mt-1.5"
+          placeholder="e.g. 72 x 32 inches"
+          value={value.size ?? ""}
+          onChange={(e) => onChange({ ...value, size: e.target.value })}
+        />
+      </div>
+      <div>
+        <Label>Fabric</Label>
+        <Input
+          className="mt-1.5"
+          placeholder="e.g. Chiffon, Georgette"
+          value={value.fabric ?? ""}
+          onChange={(e) => onChange({ ...value, fabric: e.target.value })}
+        />
+      </div>
+      <div>
+        <Label>Texture</Label>
+        <Input
+          className="mt-1.5"
+          placeholder="e.g. Soft, Textured, Crinkled"
+          value={value.texture ?? ""}
+          onChange={(e) => onChange({ ...value, texture: e.target.value })}
         />
       </div>
       <div className="sm:col-span-2">
@@ -696,59 +739,6 @@ function ProductForm({
         </label>
       </div>
 
-      <div className="sm:col-span-2">
-        <Label>Bulk discount rules</Label>
-        <div className="mt-2 space-y-2">
-          {value.bulkRules.map((r, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <Input
-                type="number"
-                className="w-28"
-                value={r.minQty}
-                aria-label="Minimum quantity"
-                onChange={(e) => {
-                  const rules = [...value.bulkRules];
-                  rules[i] = { ...r, minQty: Number(e.target.value) };
-                  onChange({ ...value, bulkRules: rules });
-                }}
-              />
-              <span className="text-sm text-muted-foreground">pcs →</span>
-              <Input
-                type="number"
-                className="w-28"
-                value={r.discountPct}
-                aria-label="Discount percent"
-                onChange={(e) => {
-                  const rules = [...value.bulkRules];
-                  rules[i] = { ...r, discountPct: Number(e.target.value) };
-                  onChange({ ...value, bulkRules: rules });
-                }}
-              />
-              <span className="text-sm text-muted-foreground">% off</span>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() =>
-                  onChange({ ...value, bulkRules: value.bulkRules.filter((_, k) => k !== i) })
-                }
-              >
-                Remove
-              </Button>
-            </div>
-          ))}
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={() =>
-              onChange({ ...value, bulkRules: [...value.bulkRules, { minQty: 10, discountPct: 30 }] })
-            }
-          >
-            Add rule
-          </Button>
-        </div>
-      </div>
 
       <div className="sm:col-span-2 space-y-4 border-t border-border pt-5">
         <div>

@@ -61,6 +61,7 @@ export type Database = {
           total: number
           tracking_number: string | null
           updated_at: string
+          urgent: boolean | null
         }
         Insert: {
           advance_due?: number
@@ -84,6 +85,7 @@ export type Database = {
           total?: number
           tracking_number?: string | null
           updated_at?: string
+          urgent?: boolean | null
         }
         Update: {
           advance_due?: number
@@ -107,6 +109,7 @@ export type Database = {
           total?: number
           tracking_number?: string | null
           updated_at?: string
+          urgent?: boolean | null
         }
         Relationships: []
       }
@@ -171,6 +174,7 @@ export type Database = {
           colors: Json
           created_at: string
           description: string
+          fabric: string | null
           faqs: Json
           featured: boolean
           features: Json
@@ -185,6 +189,7 @@ export type Database = {
           reviews: Json
           sale_price: number | null
           shipping_details: string
+          size: string | null
           sku: string
           slug: string
           sold: number
@@ -192,6 +197,7 @@ export type Database = {
           specs: Json
           stock: number
           tagline: string
+          texture: string | null
           trending: boolean
           updated_at: string
           video_url: string | null
@@ -206,6 +212,7 @@ export type Database = {
           colors?: Json
           created_at?: string
           description?: string
+          fabric?: string | null
           faqs?: Json
           featured?: boolean
           features?: Json
@@ -220,6 +227,7 @@ export type Database = {
           reviews?: Json
           sale_price?: number | null
           shipping_details?: string
+          size?: string | null
           sku?: string
           slug: string
           sold?: number
@@ -227,6 +235,7 @@ export type Database = {
           specs?: Json
           stock?: number
           tagline?: string
+          texture?: string | null
           trending?: boolean
           updated_at?: string
           video_url?: string | null
@@ -241,6 +250,7 @@ export type Database = {
           colors?: Json
           created_at?: string
           description?: string
+          fabric?: string | null
           faqs?: Json
           featured?: boolean
           features?: Json
@@ -255,6 +265,7 @@ export type Database = {
           reviews?: Json
           sale_price?: number | null
           shipping_details?: string
+          size?: string | null
           sku?: string
           slug?: string
           sold?: number
@@ -262,6 +273,7 @@ export type Database = {
           specs?: Json
           stock?: number
           tagline?: string
+          texture?: string | null
           trending?: boolean
           updated_at?: string
           video_url?: string | null

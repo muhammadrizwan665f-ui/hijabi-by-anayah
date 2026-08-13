@@ -13,7 +13,6 @@ import { getStorefront, trackVisit } from "./shop.functions";
 import type {
   BlogPost,
   CartLine,
-  Coupon,
   PaymentMethod,
   Product,
   Settings,
@@ -27,7 +26,7 @@ interface StoreState {
   settings: Settings;
   products: Product[];
   payments: PaymentMethod[];
-  coupons: Coupon[];
+  
   blog: BlogPost[];
   cart: CartLine[];
   wishlist: string[];
@@ -37,7 +36,7 @@ const initialState: StoreState = {
   settings: SEED_SETTINGS,
   products: [],
   payments: [],
-  coupons: [],
+  
   blog: SEED_BLOG,
   cart: [],
   wishlist: [],
@@ -94,7 +93,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...s,
         products: data.products,
         payments: data.payments,
-        coupons: data.coupons,
+        
         settings: data.settings,
       }));
     } catch {

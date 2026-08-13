@@ -46,7 +46,9 @@ function AdminReviews() {
   const generateReviews = useServerFn(generateReviewsFn);
   const [generating, setGenerating] = useState(false);
   const [targetProductId, setTargetProductId] = useState<string>("");
-  const [reviewCount, setReviewCount] = useState(5);
+  const [reviewCount, setReviewCount] = useState(1);
+  const [manualName, setManualName] = useState("");
+  const [manualReview, setManualReview] = useState("");
   const [open, setOpen] = useState(false);
 
   // Flatten reviews from all products
@@ -68,10 +70,20 @@ function AdminReviews() {
 
     setGenerating(true);
     try {
-      const mockReviews = Array.from({ length: reviewCount }).map(() => {
-        const name = MOCK_NAMES[Math.floor(Math.random() * MOCK_NAMES.length)];
+      const names = manualName.includes(",") 
+        ? manualName.split(",").map(n => n.trim()).filter(Boolean)
+        : [manualName.trim()].filter(Boolean);
+      
+      const texts = manualReview.includes("|") 
+        ? manualReview.split("|").map(t => t.trim()).filter(Boolean)
+        : [manualReview.trim()].filter(Boolean);
+
+      const countToGenerate = Math.max(reviewCount, names.length, texts.length);
+
+      const mockReviews = Array.from({ length: countToGenerate }).map((_, idx) => {
+        const name = names[idx % names.length] || MOCK_NAMES[Math.floor(Math.random() * MOCK_NAMES.length)];
         const city = PAK_CITIES[Math.floor(Math.random() * PAK_CITIES.length)];
-        const body = POSITIVE_BODIES[Math.floor(Math.random() * POSITIVE_BODIES.length)];
+        const body = texts[idx % texts.length] || POSITIVE_BODIES[Math.floor(Math.random() * POSITIVE_BODIES.length)];
         const rating = 5;
         const title = "Verified Purchase";
         
@@ -90,13 +102,15 @@ function AdminReviews() {
       await generateReviews({
         data: {
           productId: targetProductId,
-          count: reviewCount,
+          count: countToGenerate,
           reviews: mockReviews,
         }
       });
 
-      toast.success(`Generated ${reviewCount} reviews successfully!`);
+      toast.success(`Generated ${countToGenerate} reviews successfully!`);
       setOpen(false);
+      setManualName("");
+      setManualReview("");
       await reload();
     } catch (err: any) {
       toast.error(err.message || "Failed to generate reviews");
@@ -141,6 +155,22 @@ function AdminReviews() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Customer Names (Separate with commas for multiple)</Label>
+                <Input 
+                  placeholder="Ayesha, Maryam, Fatima..."
+                  value={manualName} 
+                  onChange={(e) => setManualName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Review Texts (Separate with | for multiple)</Label>
+                <Input 
+                  placeholder="Quality is Good | Loved the fabric | Amazing drape"
+                  value={manualReview} 
+                  onChange={(e) => setManualReview(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Number of Reviews (Max 50)</Label>

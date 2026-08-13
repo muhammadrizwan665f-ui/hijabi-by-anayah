@@ -15,10 +15,10 @@ export const Route = createFileRoute("/cart")({
       {
         name: "description",
         content:
-          "Review your Hijabi By Anayah cart, apply coupon codes, see bundle discounts and continue to checkout.",
+          "Review your Hijabi By Anayah cart and continue to checkout.",
       },
       { property: "og:title", content: "Your Cart — Hijabi By Anayah" },
-      { property: "og:description", content: "Bulk discounts and coupons applied instantly." },
+      { property: "og:description", content: "Secure checkout for Pakistan." },
       { property: "og:url", content: "/cart" },
       { name: "robots", content: "noindex" },
     ],
@@ -28,10 +28,8 @@ export const Route = createFileRoute("/cart")({
 });
 
 function Cart() {
-  const { cart, products, setQty, removeFromCart, coupons, payments, settings } = useStore();
+  const { cart, products, setQty, removeFromCart, payments, settings } = useStore();
   const navigate = useNavigate();
-  const [code, setCode] = useState("");
-  const [applied, setApplied] = useState<{ code: string; pct: number } | null>(null);
 
   const lines = cart
     .map((l) => ({ product: products.find((p) => p.id === l.productId)!, qty: l.qty }))
@@ -42,13 +40,13 @@ function Cart() {
   const totals = computeTotals({
     lines,
     method: null,
-    couponPct: applied?.pct ?? 0,
+    couponPct: 0,
     settings,
   });
   const bestTotals = computeTotals({
     lines,
     method: bestMethod,
-    couponPct: applied?.pct ?? 0,
+    couponPct: 0,
     settings,
   });
 
@@ -57,7 +55,7 @@ function Cart() {
       <div className="mx-auto max-w-3xl px-4 py-24 text-center">
         <h1 className="text-3xl font-bold">Your cart is empty</h1>
         <p className="mt-3 text-muted-foreground">
-          Add a hijab and unlock bundle discounts from 2 pieces onwards.
+          Your cart is currently empty.
         </p>
         <Button className="mt-7" size="lg" asChild>
           <Link to="/shop">Start shopping</Link>
@@ -134,16 +132,6 @@ function Cart() {
                         </Button>
                       </div>
                       <div className="sm:text-right">
-                        {t.rule ? (
-                          <p className="text-xs font-semibold text-success">
-                            Bulk {t.rule.discountPct}% off applied (-{formatPKR(t.bulk)})
-                          </p>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">
-                            Buy {product.bulkRules[0]?.minQty ?? 2}+ and save{" "}
-                            {product.bulkRules[0]?.discountPct ?? 10}%
-                          </p>
-                        )}
                         <p className="font-display text-lg font-bold">{formatPKR(t.total)}</p>
                       </div>
                     </div>
@@ -157,53 +145,9 @@ function Cart() {
         <aside className="premium-card h-fit p-6 lg:sticky lg:top-28">
           <h2 className="font-display text-lg font-bold">Order Summary</h2>
 
-          <form
-            className="mt-5 flex gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const found = coupons.find(
-                (c) => c.active && c.code.toLowerCase() === code.trim().toLowerCase(),
-              );
-              if (!found) {
-                toast.error("Invalid coupon code");
-                return;
-              }
-              if (totals.subtotal - totals.bulkDiscount < found.minOrder) {
-                toast.error(`Minimum order for ${found.code} is ${formatPKR(found.minOrder)}`);
-                return;
-              }
-              setApplied({ code: found.code, pct: found.discountPct });
-              toast.success(`${found.code} applied — ${found.discountPct}% off`);
-            }}
-          >
-            <Input
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="Promo code (try ANAYAH10)"
-              maxLength={24}
-              aria-label="Promo code"
-            />
-            <Button type="submit" variant="secondary">
-              Apply
-            </Button>
-          </form>
 
           <dl className="mt-6 space-y-2.5 text-sm">
             <Row label="Subtotal" value={formatPKR(totals.subtotal)} />
-            {totals.bulkDiscount > 0 ? (
-              <Row
-                label="Bulk quantity discount"
-                value={`-${formatPKR(totals.bulkDiscount)}`}
-                accent
-              />
-            ) : null}
-            {applied ? (
-              <Row
-                label={`Coupon ${applied.code}`}
-                value={`-${formatPKR(totals.couponDiscount)}`}
-                accent
-              />
-            ) : null}
             <Row
               label="Delivery"
               value={totals.shipping === 0 ? "FREE" : formatPKR(totals.shipping)}
@@ -216,17 +160,6 @@ function Cart() {
             </div>
           </dl>
 
-          {bestMethod ? (
-            <div className="mt-4 rounded-2xl border border-success/40 bg-success/10 p-4">
-              <p className="flex items-center gap-1.5 text-sm font-bold text-success">
-                <Tag className="size-4" /> Save {bestMethod.discountPct}% with advance payment
-              </p>
-              <p className="mt-1 text-sm">
-                Pay via {bestMethod.label} and your total drops to{" "}
-                <span className="font-display font-bold">{formatPKR(bestTotals.total)}</span>
-              </p>
-            </div>
-          ) : null}
 
           <Button size="lg" className="mt-5 w-full" onClick={() => navigate({ to: "/checkout" })}>
             Proceed to Checkout
@@ -237,7 +170,7 @@ function Cart() {
               <Truck className="size-4 text-primary" /> Estimated delivery: 1-3 working days
             </li>
             <li className="flex items-center gap-2">
-              <ShieldCheck className="size-4 text-primary" /> Secure checkout & easy 7-day exchange
+              <ShieldCheck className="size-4 text-primary" /> Secure checkout & easy 3-day exchange
             </li>
           </ul>
         </aside>

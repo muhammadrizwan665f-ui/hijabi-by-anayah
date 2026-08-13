@@ -128,9 +128,19 @@ function AdminSettings() {
               onChange={(v) => set("freeShippingOver", v)}
             />
             <NumberField
-              label="Flat shipping (PKR)"
+              label="Nationwide shipping (PKR)"
               value={draft.shippingFlat}
               onChange={(v) => set("shippingFlat", v)}
+            />
+            <NumberField
+              label="Karachi Standard (PKR)"
+              value={draft.shippingKarachi || 350}
+              onChange={(v) => set("shippingKarachi", v)}
+            />
+            <NumberField
+              label="Karachi Urgent 24h (PKR)"
+              value={draft.shippingKarachiUrgent || 450}
+              onChange={(v) => set("shippingKarachiUrgent", v)}
             />
             <TextField
               label="Currency code"

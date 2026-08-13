@@ -1,5 +1,4 @@
 import type {
-  Coupon,
   Order,
   OrderStatus,
   PaymentMethod,
@@ -51,6 +50,9 @@ export function rowToProduct(r: Row): Product {
     trending: Boolean(r["trending"]),
     active: r["active"] === undefined ? true : Boolean(r["active"]),
     sortOrder: num(r["sort_order"]),
+    size: (r["size"] as string | null) ?? undefined,
+    fabric: (r["fabric"] as string | null) ?? undefined,
+    texture: (r["texture"] as string | null) ?? undefined,
     reviews: arr(r["reviews"]),
     faqs: arr(r["faqs"]),
   };
@@ -88,6 +90,9 @@ export function productToRow(p: Product): Row {
     trending: p.trending,
     active: p.active,
     sort_order: p.sortOrder,
+    size: p.size ?? null,
+    fabric: p.fabric ?? null,
+    texture: p.texture ?? null,
     updated_at: new Date().toISOString(),
   };
 }
@@ -126,14 +131,6 @@ export function paymentToRow(m: PaymentMethod): Row {
   };
 }
 
-export function rowToCoupon(r: Row): Coupon {
-  return {
-    code: str(r["code"]),
-    discountPct: num(r["discount_pct"]),
-    minOrder: num(r["min_order"]),
-    active: Boolean(r["active"]),
-  };
-}
 
 export function rowToOrder(r: Row): Order {
   return {
@@ -142,7 +139,7 @@ export function rowToOrder(r: Row): Order {
     customer: (r["customer"] ?? {}) as Order["customer"],
     lines: arr(r["lines"]),
     paymentMethod: str(r["payment_method_code"]),
-    coupon: (r["coupon"] as string | null) ?? undefined,
+    
     subtotal: num(r["subtotal"]),
     bulkDiscount: num(r["bulk_discount"]),
     couponDiscount: num(r["coupon_discount"]),

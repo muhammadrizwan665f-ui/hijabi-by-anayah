@@ -88,7 +88,7 @@ function AdminPayments() {
           <h1 className="text-2xl font-bold sm:text-3xl">Payment methods</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Add, edit or remove EasyPaisa, JazzCash, bank transfer and COD — including account
-            numbers, discounts and screenshot verification.
+            numbers and screenshot verification.
           </p>
         </div>
         <Button onClick={() => setAdding(blank(payments.length + 1))} disabled={!!adding}>
@@ -185,20 +185,8 @@ function MethodCard({
           label="Short note"
           value={draft.note}
           onChange={(v) => set("note", v)}
-          placeholder="Instant transfer · extra discount"
+          placeholder="Instant transfer"
         />
-        <div>
-          <Label htmlFor={`disc-${initial.id || "new"}`}>Discount %</Label>
-          <Input
-            id={`disc-${initial.id || "new"}`}
-            type="number"
-            min={0}
-            max={90}
-            className="mt-1.5"
-            value={draft.discountPct}
-            onChange={(e) => set("discountPct", Number(e.target.value) || 0)}
-          />
-        </div>
         <Field
           label="Account title"
           value={draft.accountTitle ?? ""}

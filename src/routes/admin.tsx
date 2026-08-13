@@ -37,7 +37,6 @@ const LINKS = [
   { to: "/admin/products", label: "Products", Icon: Package },
   { to: "/admin/inventory", label: "Inventory", Icon: Package },
   { to: "/admin/orders", label: "Orders", Icon: ShoppingBag },
-  { to: "/admin/coupons", label: "Coupons", Icon: CreditCard },
   { to: "/admin/customers", label: "Customers", Icon: Users },
   { to: "/admin/reviews", label: "Reviews", Icon: Star },
   { to: "/admin/payments", label: "Payments", Icon: CreditCard },

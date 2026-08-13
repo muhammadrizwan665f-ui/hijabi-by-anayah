@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
+import { FileImage } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,9 +11,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import { formatPKR } from "@/lib/pricing";
 import { useAdmin } from "@/lib/admin-store";
-import { updateOrder } from "@/lib/admin.functions";
+import { getPaymentProofUrl, updateOrder } from "@/lib/admin.functions";
 import type { OrderStatus } from "@/lib/types";
 
 const STATUSES: OrderStatus[] = [
@@ -118,74 +120,191 @@ function AdminOrders() {
       ) : (
         <div className="mt-6 space-y-4">
           {list.map((o) => (
-            <div key={o.id} className="premium-card p-5">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <p className="font-display font-bold">{o.id}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(o.createdAt).toLocaleString()} · {o.paymentMethod.toUpperCase()}
-                  </p>
-                  <p className="mt-2 text-sm">
-                    {o.customer.fullName} · {o.customer.phone} · {o.customer.city},{" "}
-                    {o.customer.province}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{o.customer.address}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-display text-xl font-bold text-primary">
-                    {formatPKR(o.total)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Advance due {formatPKR(o.advanceDue)}
-                  </p>
-                </div>
-              </div>
-
-              <ul className="mt-4 space-y-1 text-sm">
-                {o.lines.map((l) => (
-                  <li key={l.productId} className="flex justify-between">
-                    <span>
-                      {l.name} × {l.qty}
-                    </span>
-                    <span>{formatPKR(l.lineTotal)}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center">
-                <div className="flex flex-1 gap-2">
-                  <Select
-                    value={o.status}
-                    onValueChange={(v) => {
-                      setOrderStatus(o.id, v as OrderStatus);
-                      toast.success(`Order ${o.id} → ${v}`);
-                    }}
-                  >
-                    <SelectTrigger className="flex-1 sm:w-44 sm:flex-none">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUSES.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {s}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    defaultValue={o.trackingNumber ?? ""}
-                    placeholder="Tracking #"
-                    className="flex-1 sm:max-w-48 sm:flex-none"
-                    aria-label="Tracking number"
-                    onBlur={(e) => setOrderStatus(o.id, o.status, e.target.value)}
-                  />
-                </div>
-                <span className="text-center text-xs text-muted-foreground sm:text-right">
-                  {o.timeline.length} events
-                </span>
-              </div>
-            </div>
+            <OrderRow key={o.id} order={o} reload={reload} setOrderStatus={setOrderStatus} />
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OrderRow({ order: o, reload, setOrderStatus }: { order: any; reload: () => Promise<void>; setOrderStatus: any }) {
+  const [viewingProof, setViewingProof] = useState(false);
+  const [proofUrl, setProofUrl] = useState<string | null>(null);
+
+  async function showProof() {
+    setViewingProof(true);
+    try {
+      const { url } = await getPaymentProofUrl({ data: { orderNo: o.id } });
+      if (!url) {
+        toast.error("No screenshot found for this order.");
+        return;
+      }
+      setProofUrl(url);
+    } catch (err) {
+      toast.error("Could not load payment screenshot");
+    }
+  }
+
+  return (
+    <div className="premium-card p-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="font-display font-bold">{o.id}</p>
+          <p className="text-xs text-muted-foreground">
+            {new Date(o.createdAt).toLocaleString()} · {o.paymentMethod.toUpperCase()}
+          </p>
+          <p className="mt-2 text-sm">
+            {o.customer.fullName} · {o.customer.phone} · {o.customer.city}, {o.customer.province}
+          </p>
+          <p className="text-xs text-muted-foreground">{o.customer.address}</p>
+        </div>
+        <div className="text-right">
+          <p className="font-display text-xl font-bold text-primary">{formatPKR(o.total)}</p>
+          <p className="text-xs text-muted-foreground">Advance due {formatPKR(o.advanceDue)}</p>
+          {o.hasScreenshot && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2 h-7 gap-1.5 text-[10px]"
+              onClick={showProof}
+            >
+              <FileImage className="size-3" /> View Receipt
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <ul className="mt-4 space-y-1 text-sm">
+        {o.lines.map((l: any) => (
+          <li key={l.productId} className="flex justify-between">
+            <span>
+              {l.name} × {l.qty}
+            </span>
+            <span>{formatPKR(l.lineTotal)}</span>
+          </li>
+        ))}
+      </ul>
+
+      {o.customer.notes && (
+        <div className="mt-3 rounded-lg bg-surface p-2.5 text-xs italic text-muted-foreground">
+          Note: {o.customer.notes}
+        </div>
+      )}
+
+      <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center">
+        <div className="flex flex-1 gap-2">
+          <Select
+            value={o.status}
+            onValueChange={(v) => {
+              setOrderStatus(o.id, v as OrderStatus);
+              toast.success(`Order ${o.id} → ${v}`);
+            }}
+          >
+            <SelectTrigger className="flex-1 sm:w-44 sm:flex-none">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUSES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            defaultValue={o.trackingNumber ?? ""}
+            placeholder="Tracking #"
+            className="flex-1 sm:max-w-48 sm:flex-none"
+            aria-label="Tracking number"
+            onBlur={(e) => setOrderStatus(o.id, o.status, e.target.value)}
+          />
+        </div>
+        <div className="flex items-center gap-3">
+          {o.paymentStatus !== "Not Required" && (
+            <span
+              className={cn(
+                "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+                o.paymentStatus === "Verified"
+                  ? "bg-green-100 text-green-700"
+                  : o.paymentStatus === "Rejected"
+                    ? "bg-red-100 text-red-700"
+                    : "bg-amber-100 text-amber-700",
+              )}
+            >
+              {o.paymentStatus}
+            </span>
+          )}
+          <span className="text-center text-xs text-muted-foreground sm:text-right">
+            {o.timeline.length} events
+          </span>
+        </div>
+      </div>
+
+      {viewingProof && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-2 sm:p-8">
+          <div className="relative flex max-h-[95vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-card shadow-2xl">
+            <div className="flex shrink-0 items-center justify-between border-b p-4">
+              <h3 className="font-display font-bold">Payment Receipt — {o.id}</h3>
+              <Button variant="ghost" size="sm" onClick={() => setViewingProof(false)}>
+                Close
+              </Button>
+            </div>
+            <div className="flex-1 overflow-auto p-4 flex flex-col items-center gap-4">
+              {proofUrl ? (
+                <>
+                  <a
+                    href={proofUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="cursor-zoom-in"
+                    title="Click to open full size"
+                  >
+                    <img
+                      src={proofUrl}
+                      alt="Payment Receipt"
+                      className="h-auto w-full rounded-lg object-contain shadow-sm"
+                    />
+                  </a>
+                  <div className="sticky bottom-0 mt-auto flex w-full justify-center gap-4 bg-card/80 py-4 backdrop-blur-sm">
+                    <Button
+                      variant="outline"
+                      className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                      onClick={() => {
+                        void updateOrder({ data: { orderNo: o.id, paymentStatus: "Verified" } })
+                          .then(() => {
+                            toast.success("Payment verified");
+                            setViewingProof(false);
+                            void reload();
+                          })
+                          .catch(() => undefined);
+                      }}
+                    >
+                      Verify Payment
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        void updateOrder({ data: { orderNo: o.id, paymentStatus: "Rejected" } })
+                          .then(() => {
+                            toast.error("Payment rejected");
+                            setViewingProof(false);
+                            void reload();
+                          })
+                          .catch(() => undefined);
+                      }}
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex h-64 items-center justify-center px-12">
+                  <p className="animate-pulse text-sm text-muted-foreground">Loading image...</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

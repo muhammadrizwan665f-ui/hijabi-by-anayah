@@ -39,7 +39,7 @@ export function Footer() {
                 toast.error("Please enter a valid email address");
                 return;
               }
-              toast.success("Subscribed! Check your inbox for your coupon.");
+              toast.success("Subscribed! Thank you for joining us.");
               setEmail("");
             }}
           >

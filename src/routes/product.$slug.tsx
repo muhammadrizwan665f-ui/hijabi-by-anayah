@@ -31,7 +31,7 @@ import {
 import { Countdown } from "@/components/site/countdown";
 import { ProductCard } from "@/components/site/product-card";
 import { Reveal } from "@/components/site/reveal";
-import { bulkDiscountFor, discountPct, formatPKR, lineTotal, unitPrice } from "@/lib/pricing";
+import { discountPct, formatPKR, lineTotal, unitPrice } from "@/lib/pricing";
 import { useStore } from "@/lib/store";
 import { useServerFn } from "@tanstack/react-start";
 import { submitReviewFn } from "@/lib/reviews.functions";
@@ -69,10 +69,10 @@ function ProductPage() {
     activeColor && activeColor.images.length > 0 ? activeColor.images : product.images;
 
   const t = lineTotal(product, qty);
-  const off = discountPct(product);
+  // const off = discountPct(product);
   const related = products.filter((p) => p.id !== product.id && p.active).slice(0, 4);
   const wished = wishlist.includes(product.id);
-  const bestPay = payments.filter((p) => p.enabled).sort((a, b) => b.discountPct - a.discountPct)[0];
+  const bestPay = payments.filter((p) => p.enabled).sort((a, b) => b.sortOrder - a.sortOrder)[0];
   const outOfStock = product.stock <= 0;
   const lowStock = product.stock > 0 && product.stock <= (settings.lowStockThreshold || 5);
 
@@ -166,8 +166,8 @@ function ProductPage() {
             </div>
           ) : null}
         </div>
-
-        <div>
+        
+        <div className="flex flex-col gap-4">
           <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible">
             {product.badges.map((b) => (
               <span
@@ -181,6 +181,28 @@ function ProductPage() {
 
           <h1 className="mt-3 text-3xl font-bold sm:text-4xl">{product.name}</h1>
           <p className="mt-2 text-muted-foreground">{product.tagline}</p>
+
+          <div className="mt-4 flex flex-wrap gap-y-2 gap-x-4 border-y border-primary/10 py-3 text-xs">
+            {product.fabric && (
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">Fabric</span>
+                <span className="font-semibold">{product.fabric}</span>
+              </div>
+            )}
+            {product.texture && (
+              <div className="flex flex-col border-l border-primary/10 pl-4">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">Texture</span>
+                <span className="font-semibold">{product.texture}</span>
+              </div>
+            )}
+            {product.size && (
+              <div className="flex flex-col border-l border-primary/10 pl-4">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">Size</span>
+                <span className="font-semibold">{product.size}</span>
+              </div>
+            )}
+          </div>
+
 
           <div className="mt-3 flex items-center gap-2 text-sm">
             <div className="flex">
@@ -199,16 +221,6 @@ function ProductPage() {
             <span className="font-display text-4xl font-bold text-primary">
               {formatPKR(unitPrice(product))}
             </span>
-            {product.salePrice ? (
-              <div className="flex items-center gap-2">
-                <span className="text-lg text-muted-foreground line-through">
-                  {formatPKR(product.price)}
-                </span>
-                <span className="rounded-full border border-primary px-2.5 py-1 text-[10px] font-bold text-primary uppercase tracking-tight bg-surface">
-                  Save {off}%
-                </span>
-              </div>
-            ) : null}
           </div>
 
           {product.flashSale && product.flashEndsAt ? (
@@ -235,43 +247,6 @@ function ProductPage() {
             <p className="mt-4 text-sm text-muted-foreground">In stock · ready to ship</p>
           )}
 
-          {/* Bulk discount box */}
-          <div className="premium-card mt-6 p-5">
-            <h2 className="font-display font-bold">Buy more, save more</h2>
-            <div className="mt-3 flex flex-col gap-2 sm:grid sm:grid-cols-3">
-              {product.bulkRules.map((r) => {
-                const activeRule = bulkDiscountFor(product.bulkRules, qty)?.minQty === r.minQty;
-                return (
-                  <button
-                    key={r.minQty}
-                    onClick={() => setQty(r.minQty)}
-                    className={`min-h-[60px] rounded-2xl border p-3 text-left transition-colors ${activeRule ? "border-primary bg-surface shadow-sm" : "border-border"}`}
-                  >
-                    <p className="font-display font-bold">Buy {r.minQty}</p>
-                    <p className="text-xs text-success">{r.discountPct}% off</p>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Payment discount box */}
-          <div className="premium-card mt-4 p-5">
-            <h2 className="font-display font-bold">Payment discounts</h2>
-            <ul className="mt-3 space-y-2 text-sm">
-              {payments
-                .filter((p) => p.enabled)
-                .map((p) => (
-                  <li key={p.id} className="flex items-center justify-between gap-3">
-                    <span>
-                      {p.label}{" "}
-                      <span className="text-xs text-muted-foreground">— {p.note}</span>
-                    </span>
-                    <span className="font-semibold text-success">{p.discountPct}% off</span>
-                  </li>
-                ))}
-            </ul>
-          </div>
 
           <div className="mt-6 flex items-center gap-3">
             <div className="flex items-center gap-1 rounded-full border border-border p-1">
@@ -298,11 +273,6 @@ function ProductPage() {
             <p className="text-sm">
               Total:{" "}
               <span className="font-display text-lg font-bold">{formatPKR(t.total)}</span>
-              {t.bulk > 0 ? (
-                <span className="ml-1 text-xs font-semibold text-success">
-                  (saved {formatPKR(t.bulk)})
-                </span>
-              ) : null}
             </p>
           </div>
 
@@ -366,7 +336,7 @@ function ProductPage() {
             {[
               { Icon: Truck, t: "1-3 day delivery" },
               { Icon: ShieldCheck, t: product.warranty },
-              { Icon: RotateCcw, t: "7-day replacement" },
+              { Icon: RotateCcw, t: "3-day replacement" },
             ].map(({ Icon, t: text }) => (
               <div
                 key={text}
@@ -504,7 +474,7 @@ function ProductPage() {
 
       <section className="mt-20">
         <h2 className="text-2xl font-bold">You may also like</h2>
-        <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
           {related.map((p, i) => (
             <ProductCard key={p.id} product={p} index={i} />
           ))}
@@ -520,8 +490,6 @@ function ProductPage() {
               <p className="text-[10px] font-semibold text-destructive leading-tight sm:text-[11px]">Out of Stock</p>
             ) : lowStock ? (
               <p className="text-[10px] font-semibold text-destructive leading-tight sm:text-[11px]">Only {product.stock} left</p>
-            ) : bestPay ? (
-              <p className="text-[10px] text-success leading-tight sm:text-[11px]">Save {bestPay.discountPct}% on advance</p>
             ) : null}
           </div>
           <Button

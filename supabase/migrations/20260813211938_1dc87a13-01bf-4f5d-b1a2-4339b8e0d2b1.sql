@@ -1,0 +1,1 @@
+UPDATE public.products SET warranty = '3-day exchange on unworn pieces' WHERE warranty ILIKE '%7-day%';

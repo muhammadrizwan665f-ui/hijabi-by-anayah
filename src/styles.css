@@ -329,10 +329,14 @@
   }
 }
 
-/* Hide Lovable badge */
+/* 
+ * The following CSS is added to ensure that the "Made with Lovable" 
+ * attribution is not visible to the end-user while maintaining layout stability.
+ */
 a[href*="lovable.app"],
 [class*="lovable-badge"],
-#lovable-badge {
+#lovable-badge,
+[data-lovable-badge] {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
@@ -343,4 +347,5 @@ a[href*="lovable.app"],
   padding: 0 !important;
   overflow: hidden !important;
   position: absolute !important;
+  z-index: -9999 !important;
 }

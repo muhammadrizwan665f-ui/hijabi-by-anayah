@@ -10,7 +10,8 @@ import { toast } from "sonner";
 
 export function ProductCard({ product, index = 0 }: { product: Product; index?: number }) {
   const { addToCart } = useStore();
-  const off = discountPct(product);
+  // discountPct is no longer needed since we show a single price or a specific sale price
+  // const off = discountPct(product);
   const soldPct = Math.min(96, Math.round((product.sold / (product.sold + product.stock)) * 100));
   const outOfStock = product.stock <= 0;
   const lowStock = product.stock > 0 && product.stock <= 5;
@@ -24,11 +25,6 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
       className="premium-card group relative flex flex-col overflow-hidden"
     >
       <div className="absolute left-3 top-3 z-10 flex flex-col gap-1.5">
-        {off > 0 ? (
-          <span className="rounded-full border border-primary px-2.5 py-1 text-xs font-bold text-primary shadow-soft bg-surface">
-            Save {off}%
-          </span>
-        ) : null}
         {product.flashSale ? (
           <span className="flex items-center gap-1 rounded-full bg-destructive px-2.5 py-1 text-xs font-bold text-destructive-foreground">
             <Flame className="size-3" /> Flash
@@ -68,11 +64,6 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
           <span className="font-display text-base font-bold text-primary sm:text-xl">
             {formatPKR(unitPrice(product))}
           </span>
-          {product.salePrice ? (
-            <span className="text-sm text-muted-foreground line-through">
-              {formatPKR(product.price)}
-            </span>
-          ) : null}
         </div>
 
         <div>

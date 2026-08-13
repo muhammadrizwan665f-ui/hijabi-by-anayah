@@ -21,10 +21,12 @@ const NAV = [
   { to: "/", label: "HOME" },
   { to: "/shop", label: "ABAYAH", search: { category: "Abayah" } },
   { to: "/shop", label: "NAMAZ CHADAR", search: { category: "Namaz Chadar" } },
-  { to: "/shop", label: "HIJABS", search: { category: "Basic/ Plain Hijabs" } },
+  { to: "/shop", label: "HIJAB INNER/CAPS", search: { category: "Hijab Inner/caps" } },
   { to: "/shop", label: "ACCESSORIES", search: { category: "Accessories" } },
+  { to: "/shop", label: "BASIC/ PLAIN HIJABS", search: { category: "Basic/ Plain Hijabs" } },
   { to: "/shop", label: "NEW ARRIVAL" },
   { to: "/deals", label: "SALE" },
+  { to: "/about", label: "OUR STORY" },
 ] as any[];
 
 export function Header() {
@@ -56,13 +58,14 @@ export function Header() {
     const base = [
       { to: "/", label: "HOME" },
       ...(settings.categories || [])
-        .slice(0, 5)
+        .slice(0, 6)
         .map((c) => ({ to: "/shop", label: c.name.toUpperCase(), search: { category: c.name } })),
       { to: "/shop", label: "NEW ARRIVAL" },
       { to: "/deals", label: "SALE" },
+      { to: "/about", label: "OUR STORY" },
     ];
     // Fallback to static nav if no categories are managed yet
-    if (base.length <= 3) return NAV;
+    if (base.length <= 4) return NAV;
     return base;
   }, [settings.categories]);
 

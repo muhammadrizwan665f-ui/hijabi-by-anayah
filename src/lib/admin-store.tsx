@@ -11,12 +11,12 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { getAdminBootstrap } from "./admin.functions";
 import { toSettings } from "./mappers";
-import type { Coupon, Order, PaymentMethod, Product, Settings } from "./types";
+import type { Order, PaymentMethod, Product, Settings } from "./types";
 
 interface AdminData {
   products: Product[];
   payments: PaymentMethod[];
-  coupons: Coupon[];
+  
   orders: Order[];
   settings: Settings;
 }
@@ -34,7 +34,7 @@ interface AdminApi extends AdminData {
 const emptyData: AdminData = {
   products: [],
   payments: [],
-  coupons: [],
+  
   orders: [],
   settings: toSettings({}),
 };

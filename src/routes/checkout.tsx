@@ -27,7 +27,7 @@ export const Route = createFileRoute("/checkout")({
       {
         name: "description",
         content:
-          "Complete your Hijabi By Anayah order with cash on delivery, EasyPaisa, JazzCash or bank transfer and save up to 15%.",
+          "Complete your Hijabi By Anayah order with cash on delivery, EasyPaisa, JazzCash or bank transfer.",
       },
       { property: "og:title", content: "Secure Checkout — Hijabi By Anayah" },
       { property: "og:description", content: "COD and advance payment options for Pakistan." },
@@ -97,6 +97,7 @@ function Checkout() {
     address: "",
     postalCode: "",
     notes: "",
+    urgent: false,
   });
 
   const lines = cart
@@ -105,7 +106,7 @@ function Checkout() {
 
   const activeMethods = payments.filter((p) => p.enabled);
   const selected = activeMethods.find((p) => p.id === method) ?? null;
-  const totals = computeTotals({ lines, method: selected, couponPct: 0, settings, province: form.province });
+  const totals = computeTotals({ lines, method: selected, couponPct: 0, settings, province: form.province, city: form.city, urgent: form.urgent });
 
   if (lines.length === 0) {
     return (
@@ -118,7 +119,7 @@ function Checkout() {
     );
   }
 
-  const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k: keyof typeof form) => (v: string | boolean) => setForm((f) => ({ ...f, [k]: v }));
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -144,6 +145,7 @@ function Checkout() {
         data: {
           lines: lines.map(({ product, qty }) => ({ productId: product.id, qty })),
           paymentCode: method,
+          urgent: form.urgent,
           customer: {
             fullName: form.fullName,
             phone: form.phone,
@@ -204,6 +206,62 @@ function Checkout() {
               <Field label="Area" value={form.area} onChange={set("area")} required />
               <Field label="Postal code (optional)" value={form.postalCode} onChange={set("postalCode")} />
             </div>
+            <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+              <Label className="mb-2 block text-sm font-bold">Courier & Delivery Selection</Label>
+              <RadioGroup
+                value={form.urgent ? "urgent" : "standard"}
+                onValueChange={(v) => set("urgent")(v === "urgent")}
+                className="flex flex-col gap-3"
+              >
+                {form.city?.toLowerCase().trim() === "karachi" ? (
+                  <>
+                    <label className="flex cursor-pointer items-center justify-between rounded-xl border border-border bg-background px-4 py-3 hover:border-primary transition-colors">
+                      <div className="flex items-center gap-3">
+                        <RadioGroupItem value="standard" />
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">Karachi Standard Delivery</span>
+                          <span className="text-[10px] text-muted-foreground italic">1-2 working days · 300 advance</span>
+                        </div>
+                      </div>
+                      <span className="text-sm font-bold">300 DC</span>
+                    </label>
+                    <label className="flex cursor-pointer items-center justify-between rounded-xl border border-border bg-background px-4 py-3 hover:border-primary transition-colors">
+                      <div className="flex items-center gap-3">
+                        <RadioGroupItem value="urgent" />
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">Karachi Express (24 Hours)</span>
+                          <span className="text-[10px] text-muted-foreground italic">Urgent delivery · 450 advance</span>
+                        </div>
+                      </div>
+                      <span className="text-sm font-bold text-primary">450 DC</span>
+                    </label>
+                  </>
+                ) : (
+                  <>
+                    <label className="flex cursor-pointer items-center justify-between rounded-xl border border-border bg-background px-4 py-3 hover:border-primary transition-colors">
+                      <div className="flex items-center gap-3">
+                        <RadioGroupItem value="standard" />
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">Standard Delivery (TRAX/Other)</span>
+                          <span className="text-[10px] text-muted-foreground italic">5-6 working days · 350 advance</span>
+                        </div>
+                      </div>
+                      <span className="text-sm font-bold">350 DC</span>
+                    </label>
+                    <label className="flex cursor-pointer items-center justify-between rounded-xl border border-border bg-background px-4 py-3 hover:border-primary transition-colors">
+                      <div className="flex items-center gap-3">
+                        <RadioGroupItem value="urgent" />
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">Urgent / Leopard Courier</span>
+                          <span className="text-[10px] text-muted-foreground italic">Fastest delivery · 450 advance</span>
+                        </div>
+                      </div>
+                      <span className="text-sm font-bold text-primary">450 DC</span>
+                    </label>
+                  </>
+                )}
+              </RadioGroup>
+            </div>
             <div className="mt-4">
               <Label htmlFor="address">Complete address</Label>
               <Textarea
@@ -245,9 +303,6 @@ function Checkout() {
                   <div className="flex-1">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <span className="font-semibold">{m.label}</span>
-                      <span className="w-fit rounded-full border border-primary px-2.5 py-0.5 text-xs font-bold text-primary bg-surface">
-                        {m.discountPct}% OFF
-                      </span>
                     </div>
                     <p className="mt-0.5 text-xs text-muted-foreground">{m.note}</p>
                     {method === m.id ? (
@@ -320,18 +375,12 @@ function Checkout() {
 
           <dl className="mt-5 space-y-2 border-t border-primary/20 pt-4 text-sm">
             <Line label="Subtotal" value={formatPKR(totals.subtotal)} />
-            {totals.bulkDiscount > 0 ? (
-              <Line label="Bulk discount" value={`-${formatPKR(totals.bulkDiscount)}`} accent />
-            ) : null}
-            {totals.paymentDiscount > 0 ? (
-              <Line
-                label={`${selected?.label} discount`}
-                value={`-${formatPKR(totals.paymentDiscount)}`}
-                accent
-              />
-            ) : null}
             <Line
-              label={`Delivery (${form.province})`}
+              label={
+                form.city?.toLowerCase().trim() === "karachi"
+                  ? form.urgent ? "Karachi Express (24h)" : "Karachi Standard"
+                  : form.urgent ? "Delivery (Urgent/Leopard)" : "Delivery (Standard/TRAX)"
+              }
               value={totals.shipping === 0 ? "FREE" : formatPKR(totals.shipping)}
             />
             <div className="flex items-baseline justify-between border-t border-primary/20 pt-3">
@@ -340,11 +389,31 @@ function Checkout() {
                 {formatPKR(totals.total)}
               </dd>
             </div>
-            <p className="rounded-xl bg-surface border border-primary/10 p-3 text-xs text-primary font-medium">
-              {method === "cod"
-                ? `Pay ${formatPKR(totals.advanceDue)} delivery charges in advance, rest on delivery.`
-                : `Pay ${formatPKR(totals.advanceDue)} in advance to lock this discount.`}
-            </p>
+            <div className="rounded-xl bg-surface border border-primary/10 p-3 text-[11px] text-primary space-y-2">
+              <p className="font-bold flex items-center gap-1.5">
+                <span className="text-base">🚨</span> Note: Payment in Advance Required
+              </p>
+              <ul className="list-inside list-disc space-y-1 opacity-90">
+                {form.city?.toLowerCase().trim() === "karachi" ? (
+                  <>
+                    <li>Standard Karachi: {formatPKR(300)} advance required.</li>
+                    <li>Karachi Express: {formatPKR(450)} advance required.</li>
+                    <li>Estimated delivery: 1-2 days.</li>
+                  </>
+                ) : (
+                  <>
+                    <li>Minimum {formatPKR(350)} required for order confirmation.</li>
+                    <li>Leopard Courier: Minimum {formatPKR(450)} advance required.</li>
+                    <li>Out of city: 5-6 working days via TRAX.</li>
+                  </>
+                )}
+              </ul>
+              <p className="font-medium mt-2 pt-2 border-t border-primary/10">
+                {method === "cod"
+                  ? `Pay advance now, rest on delivery.`
+                  : `Pay total amount to confirm your order.`}
+              </p>
+            </div>
           </dl>
 
           <Button type="submit" size="lg" className="mt-5 w-full" disabled={submitting}>
@@ -356,8 +425,10 @@ function Checkout() {
               "Place Order"
             )}
           </Button>
-          <p className="mt-3 text-center text-xs text-muted-foreground">
-            Estimated delivery 1-3 working days · Secure checkout
+          <p className="mt-3 text-center text-[10px] text-muted-foreground leading-relaxed">
+            Delivery charges apply as per courier receipt shared by service.
+            <br />
+            Estimated delivery: Karachi 1-2 days · Nationwide 3-6 days
           </p>
         </aside>
       </form>

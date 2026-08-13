@@ -41,7 +41,7 @@ const TRUST = [
   { Icon: Truck, title: "Fast Delivery", text: "2-4 days nationwide" },
   { Icon: Wallet, title: "Cash on Delivery", text: "Pay when it arrives" },
   { Icon: ShieldCheck, title: "Premium Fabrics", text: "Hand-checked quality" },
-  { Icon: RotateCcw, title: "Easy Exchange", text: "7-day exchange policy" },
+  { Icon: RotateCcw, title: "Easy Exchange", text: "3-day exchange policy" },
 ];
 
 function Home() {
@@ -57,7 +57,7 @@ function Home() {
     ? settings.heroSlides
     : [
         {
-          image: "/products/hero.jpg",
+          image: "/products/banner-general-wide.jpg",
           title: "Modesty, softly refined",
           subtitle:
             "Hijabs, namaz chadars and accessories chosen for their drape, weight and finish — made for everyday wear, delivered anywhere in Pakistan with cash on delivery.",
@@ -332,7 +332,7 @@ function Home() {
           <h2 className="text-3xl font-bold sm:text-4xl">Ready to build your everyday edit?</h2>
           <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
             Order now and pay cash on delivery, or pay in advance with EasyPaisa, JazzCash or bank
-            transfer for an extra discount.
+            transfer.
           </p>
           <div className="mt-7 flex flex-wrap justify-center gap-3">
             <Button size="lg" asChild>

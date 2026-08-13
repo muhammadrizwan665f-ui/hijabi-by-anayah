@@ -19,13 +19,12 @@ export function unitPrice(product: Product): number {
 }
 
 export function discountPct(product: Product): number {
-  if (!product.salePrice) return 0;
+  if (!product.salePrice || product.price <= 0) return 0;
   return Math.round(((product.price - product.salePrice) / product.price) * 100);
 }
 
 export function bulkDiscountFor(rules: BulkRule[], qty: number): BulkRule | null {
-  const sorted = [...rules].sort((a, b) => b.minQty - a.minQty);
-  return sorted.find((r) => qty >= r.minQty) ?? null;
+  return null;
 }
 
 export function lineTotal(product: Product, qty: number) {
@@ -43,6 +42,7 @@ export interface CartTotals {
   shipping: number;
   total: number;
   advanceDue: number;
+  isUrgent?: boolean;
 }
 
 export function computeTotals(opts: {
@@ -51,28 +51,42 @@ export function computeTotals(opts: {
   couponPct: number;
   settings: Settings;
   province?: string;
+  city?: string;
+  urgent?: boolean;
 }): CartTotals {
   let subtotal = 0;
-  let bulkDiscount = 0;
   for (const l of opts.lines) {
     const t = lineTotal(l.product, l.qty);
     subtotal += t.base;
-    bulkDiscount += t.bulk;
   }
-  const afterBulk = subtotal - bulkDiscount;
-  const couponDiscount = (afterBulk * opts.couponPct) / 100;
-  const afterCoupon = afterBulk - couponDiscount;
-  const paymentDiscount = opts.method ? (afterCoupon * opts.method.discountPct) / 100 : 0;
-  const goods = afterCoupon - paymentDiscount;
+  const goods = subtotal;
+  const bulkDiscount = 0;
+  const couponDiscount = 0;
+  const paymentDiscount = 0;
+  const isUrgent = !!opts.urgent;
 
-  const rate =
-    (opts.province && opts.settings.provinceRates[opts.province]) || opts.settings.shippingFlat;
+  let rate = opts.settings.shippingFlat ?? 350;
+  const isKarachi = opts.city?.toLowerCase().trim() === "karachi";
+
+  if (isKarachi) {
+    rate = isUrgent 
+      ? (opts.settings.shippingKarachiUrgent || 450) 
+      : 300; // Standard Karachi only 300
+  } else {
+    // For non-Karachi, if urgent is selected it's always 450
+    if (isUrgent) {
+      rate = 450;
+    } else if (opts.province && opts.settings.provinceRates && opts.settings.provinceRates[opts.province]) {
+      rate = opts.settings.provinceRates[opts.province] ?? opts.settings.shippingFlat ?? 350;
+    }
+  }
+
   const shipping = goods === 0 ? 0 : goods >= opts.settings.freeShippingOver ? 0 : rate;
 
   const total = goods + shipping;
   const advanceDue = opts.method?.id === "cod" ? shipping : total;
 
-  return { subtotal, bulkDiscount, couponDiscount, paymentDiscount, shipping, total, advanceDue };
+  return { subtotal, bulkDiscount, couponDiscount, paymentDiscount, shipping, total, advanceDue, isUrgent };
 }
 
 export function countdown(target: string | null) {

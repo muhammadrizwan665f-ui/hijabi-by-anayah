@@ -84,6 +84,9 @@ export interface Product {
   active: boolean;
   sortOrder: number;
   reviews: Review[];
+  size?: string | undefined;
+  fabric?: string | undefined;
+  texture?: string | undefined;
   faqs: { q: string; a: string }[];
 }
 
@@ -102,12 +105,6 @@ export interface PaymentMethod {
   sortOrder: number;
 }
 
-export interface Coupon {
-  code: string;
-  discountPct: number;
-  minOrder: number;
-  active: boolean;
-}
 
 export interface CartLine {
   productId: string;
@@ -133,7 +130,7 @@ export interface Order {
   customer: Customer;
   lines: { productId: string; name: string; qty: number; unitPrice: number; lineTotal: number }[];
   paymentMethod: PaymentMethodId;
-  coupon?: string | undefined;
+  
   subtotal: number;
   bulkDiscount: number;
   couponDiscount: number;
@@ -158,6 +155,8 @@ export interface Settings {
   address: string;
   freeShippingOver: number;
   shippingFlat: number;
+  shippingKarachi: number;
+  shippingKarachiUrgent: number;
   provinceRates: Record<string, number>;
   saleBannerText: string;
   saleEndsAt: string;

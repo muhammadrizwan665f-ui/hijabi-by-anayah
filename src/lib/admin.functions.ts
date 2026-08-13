@@ -4,7 +4,6 @@ import { z } from "zod";
 import {
   paymentToRow,
   productToRow,
-  rowToCoupon,
   rowToOrder,
   rowToPayment,
   rowToProduct,
@@ -47,17 +46,15 @@ export const getAdminBootstrap = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertAdmin(context as never);
     const supabase = context.supabase;
-    const [products, payments, coupons, orders, settings] = await Promise.all([
+    const [products, payments, orders, settings] = await Promise.all([
       supabase.from("products").select("*").order("sort_order"),
       supabase.from("payment_methods").select("*").order("sort_order"),
-      supabase.from("coupons").select("*"),
       supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(500),
       supabase.from("site_settings").select("data").maybeSingle(),
     ]);
     return {
       products: (products.data ?? []).map(rowToProduct),
       payments: (payments.data ?? []).map(rowToPayment),
-      coupons: (coupons.data ?? []).map(rowToCoupon),
       orders: (orders.data ?? []).map(rowToOrder),
       settings: toSettings(settings.data?.data),
     };
@@ -65,7 +62,7 @@ export const getAdminBootstrap = createServerFn({ method: "GET" })
 
 export const saveProduct = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { product: Product }) => input)
+  .inputValidator((input: { product: Product }) => z.object({ product: z.any() }).parse(input))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
     const row = productToRow(data.product);
@@ -137,7 +134,7 @@ export const uploadProductImage = createServerFn({ method: "POST" })
 
 export const savePaymentMethod = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { method: ReturnType<typeof rowToPayment> }) => input)
+  .inputValidator((input: { method: ReturnType<typeof rowToPayment> }) => z.object({ method: z.any() }).parse(input))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
     const row = paymentToRow(data.method);
@@ -160,39 +157,10 @@ export const deletePaymentMethod = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const saveCoupon = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: { coupon: { code: string; discountPct: number; minOrder: number; active: boolean } }) => input)
-  .handler(async ({ data, context }) => {
-    await assertAdmin(context as never);
-    const { error } = await context.supabase.from("coupons").upsert(
-      {
-        code: data.coupon.code.toUpperCase(),
-        discount_pct: data.coupon.discountPct,
-        min_order: data.coupon.minOrder,
-        active: data.coupon.active,
-      },
-      { onConflict: "code" },
-    );
-    if (error) throw new Error(error.message);
-    return { ok: true };
-  });
-
-export const deleteCouponFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: { code: string }) =>
-    z.object({ code: z.string().trim().min(2).max(40) }).parse(input),
-  )
-  .handler(async ({ data, context }) => {
-    await assertAdmin(context as never);
-    const { error } = await context.supabase.from("coupons").delete().eq("code", data.code);
-    if (error) throw new Error(error.message);
-    return { ok: true };
-  });
 
 export const saveSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { settings: Record<string, unknown> }) => input)
+  .inputValidator((input: { settings: Record<string, unknown> }) => z.object({ settings: z.record(z.any()) }).parse(input))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
     const { error } = await context.supabase
