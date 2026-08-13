@@ -32,14 +32,13 @@ const PUBLIC_PAYMENT_COLUMNS =
   "id,code,label,note,discount_pct,enabled,requires_proof,qr_url,instructions,sort_order,created_at";
 
 export const getStorefront = createServerFn({ method: "GET" }).handler(async () => {
-  const { getPublicClient, getAdminClient } = await import("./db.server");
+  const { getPublicClient } = await import("./db.server");
   const supabase = getPublicClient();
-  const admin = await getAdminClient();
   const [products, payments, coupons, settings] = await Promise.all([
     supabase.from("products").select("*").eq("active", true).order("sort_order"),
     supabase.from("payment_methods").select(PUBLIC_PAYMENT_COLUMNS).eq("enabled", true).order("sort_order"),
     supabase.from("coupons").select("*").eq("active", true),
-    admin.from("site_settings").select("data").maybeSingle(),
+    supabase.from("site_settings").select("data").maybeSingle(),
   ]);
   return {
     products: (products.data ?? []).map(rowToProduct),
