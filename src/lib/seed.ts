@@ -59,18 +59,18 @@ export const SEED_SETTINGS: Settings = {
   privacyPolicy: "We protect your data.",
   heroSlides: [
     {
-      image: "/products/hero.jpg",
-      mobileImage: "/products/hero.jpg",
+      image: "/products/banner-hijabs.jpg",
+      mobileImage: "/products/banner-hijabs.jpg",
       link: "/shop",
     },
     {
-      image: "/products/luxury-hijab.jpg",
-      mobileImage: "/products/luxury-hijab.jpg",
+      image: "/products/banner-abayas.jpg",
+      mobileImage: "/products/banner-abayas.jpg",
       link: "/shop",
     },
     {
-      image: "/products/hijab-crinkle.jpg",
-      mobileImage: "/products/hijab-crinkle.jpg",
+      image: "/products/banner-accessories.jpg",
+      mobileImage: "/products/banner-accessories.jpg",
       link: "/shop",
     },
   ],
