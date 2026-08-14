@@ -5,9 +5,7 @@ import {
   BadgeCheck,
   Check,
   Heart,
-  RotateCcw,
   Share2,
-  ShieldCheck,
   Star,
   Truck,
   Zap,
@@ -332,19 +330,10 @@ function ProductPage() {
             </Button>
           </div>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            {[
-              { Icon: Truck, t: "1-3 day delivery" },
-              { Icon: ShieldCheck, t: product.warranty },
-              { Icon: RotateCcw, t: "3-day replacement" },
-            ].map(({ Icon, t: text }) => (
-              <div
-                key={text}
-                className="flex items-center gap-2 rounded-2xl border border-primary/20 bg-surface p-3 text-xs"
-              >
-                <Icon className="size-4 shrink-0 text-primary" /> {text}
-              </div>
-            ))}
+          <div className="mt-6">
+            <div className="flex items-center gap-2 rounded-2xl border border-primary/20 bg-surface p-3 text-xs">
+              <Truck className="size-4 shrink-0 text-primary" /> Delivery time depend on city and shipping services
+            </div>
           </div>
         </div>
       </div>
