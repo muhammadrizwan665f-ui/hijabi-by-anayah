@@ -158,7 +158,7 @@ function Shop() {
       <Reveal>
         <h1 className="text-3xl font-bold sm:text-4xl">All Products</h1>
         <p className="mt-2 text-muted-foreground">
-          {filtered.length} products · free delivery over Rs 5,000
+          {filtered.length} products
         </p>
       </Reveal>
 
