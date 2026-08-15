@@ -65,7 +65,7 @@ function About() {
           "Hand-checked fabric and stitching on every piece",
           "Cash on delivery in 400+ cities",
           "Colour-fast dyes tested wash after wash",
-          "3-day exchange on unworn pieces",
+          "Secure payments & cash on delivery",
           "Real reviews — we never delete them",
         ].map((t, i) => (
           <Reveal key={t} delay={i * 0.05} className="premium-card flex items-start gap-3 p-6 bg-surface/50">

@@ -1,4 +1,5 @@
 import type {
+  Notification,
   Order,
   OrderStatus,
   PaymentMethod,
@@ -31,10 +32,16 @@ export function rowToProduct(r: Row): Product {
     sold: num(r["sold"]),
     rating: num(r["rating"], 5),
     images: arr<string>(r["images"]),
-    colors: arr<{ name: string; hex: string; images: string[] }>(r["colors"]).map((c) => ({
+    colors: arr<{ name: string; hex: string; images: string[]; stock?: number | null }>(
+      r["colors"],
+    ).map((c) => ({
       name: str(c?.name),
       hex: str(c?.hex, "#C9A88A"),
       images: arr<string>(c?.images),
+      stock:
+        c?.stock === null || c?.stock === undefined || Number.isNaN(Number(c.stock))
+          ? null
+          : Math.max(0, Math.trunc(Number(c.stock))),
     })),
     videoUrl: (r["video_url"] as string | null) ?? undefined,
     features: arr<string>(r["features"]),
@@ -137,7 +144,14 @@ export function rowToOrder(r: Row): Order {
     id: str(r["order_no"]),
     createdAt: str(r["created_at"]),
     customer: (r["customer"] ?? {}) as Order["customer"],
-    lines: arr(r["lines"]),
+    lines: arr<{ productId: string; name: string; qty: number; unitPrice: number; lineTotal: number; colorName?: string }>(r["lines"]).map(l => ({
+      productId: str(l.productId),
+      name: str(l.name),
+      qty: num(l.qty, 1),
+      unitPrice: num(l.unitPrice),
+      lineTotal: num(l.lineTotal),
+      colorName: l.colorName ? str(l.colorName) : undefined
+    })),
     paymentMethod: str(r["payment_method_code"]),
     
     subtotal: num(r["subtotal"]),
@@ -180,5 +194,18 @@ export function toSettings(data: unknown): Settings {
     socials: { ...SEED_SETTINGS.socials, ...(d.socials ?? {}) },
     seo: { ...SEED_SETTINGS.seo, ...(d.seo ?? {}) },
     analytics: { ...SEED_SETTINGS.analytics, ...(d.analytics ?? {}) },
+  };
+}
+
+export function rowToNotification(r: Row): Notification {
+  return {
+    id: str(r["id"]),
+    userId: (r["user_id"] as string | null) ?? null,
+    orderNo: str(r["order_no"]),
+    title: str(r["title"]),
+    message: str(r["message"]),
+    type: str(r["type"]) as Notification["type"],
+    isRead: Boolean(r["is_read"]),
+    createdAt: str(r["created_at"]),
   };
 }

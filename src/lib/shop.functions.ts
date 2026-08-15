@@ -5,7 +5,13 @@ import { computeTotals, lineTotal } from "./pricing";
 
 const cartSchema = z.object({
   lines: z
-    .array(z.object({ productId: z.string().uuid(), qty: z.number().int().min(1).max(999) }))
+    .array(
+      z.object({
+        productId: z.string().uuid(),
+        qty: z.number().int().min(1).max(999),
+        colorName: z.string().trim().max(60).optional(),
+      }),
+    )
     .min(1)
     .max(40),
   paymentCode: z.string().trim().min(2).max(40),
@@ -115,8 +121,20 @@ export const createOrder = createServerFn({ method: "POST" })
     const products = (productRows ?? []).map(rowToProduct);
 
     const lines = data.lines
-      .map((l) => ({ product: products.find((p) => p.id === l.productId), qty: l.qty }))
-      .filter((l): l is { product: (typeof products)[number]; qty: number } => Boolean(l.product));
+      .map((l) => ({
+        product: products.find((p) => p.id === l.productId),
+        qty: l.qty,
+        colorName: l.colorName,
+      }))
+      .filter(
+        (
+          l,
+        ): l is {
+          product: (typeof products)[number];
+          qty: number;
+          colorName: string | undefined;
+        } => Boolean(l.product),
+      );
     if (lines.length === 0) throw new Error("Your cart items are no longer available.");
 
 
@@ -160,7 +178,11 @@ export const createOrder = createServerFn({ method: "POST" })
     const status = method.requiresProof ? "Payment Verification Pending" : "Pending";
     const now = new Date().toISOString();
 
-    const stockLines = lines.map(({ product, qty }) => ({ productId: product.id, qty }));
+    const stockLines = lines.map(({ product, qty, colorName }) => ({
+      productId: product.id,
+      qty,
+      ...(colorName ? { colorName } : {}),
+    }));
 
     // Atomic reservation: locks each product row, validates availability, then
     // decrements stock and increments sold. Blocks overselling under races.
@@ -180,12 +202,13 @@ export const createOrder = createServerFn({ method: "POST" })
       .insert({
         order_no: orderNo,
         customer: data.customer,
-        lines: lines.map(({ product, qty }) => {
+        lines: lines.map(({ product, qty, colorName }) => {
           const t = lineTotal(product, qty);
           return {
             productId: product.id,
             name: product.name,
             qty,
+            ...(colorName ? { colorName } : {}),
             unitPrice: Math.round(t.total / qty),
             lineTotal: t.total,
           };
@@ -213,6 +236,25 @@ export const createOrder = createServerFn({ method: "POST" })
       await admin.rpc("release_stock", { _lines: stockLines });
       throw new Error("We could not save your order. Please try again.");
     }
+
+    // New Order Notification for Admin
+    const notifMessage = `A new order ${orderNo} has been placed by ${data.customer.fullName}.`;
+    await admin.from("notifications").insert({
+      order_no: orderNo,
+      title: "New Order Received",
+      message: notifMessage,
+      type: "admin_new_order",
+      is_read: false,
+    });
+
+    // Push notification to every registered admin device (works when the site is closed).
+    const { broadcastAdminPush } = await import("./push-broadcast.server");
+    await broadcastAdminPush(admin as never, {
+      title: "🛍️ New Order Received",
+      message: notifMessage,
+      url: "/admin/orders",
+    });
+
 
     return rowToOrder(inserted as Record<string, unknown>);
   });

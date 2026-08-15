@@ -13,6 +13,7 @@ import { getStorefront, trackVisit } from "./shop.functions";
 import type {
   BlogPost,
   CartLine,
+  FontId,
   PaymentMethod,
   Product,
   Settings,
@@ -46,15 +47,21 @@ interface StoreApi extends StoreState {
   hydrated: boolean;
   loading: boolean;
   refresh: () => Promise<void>;
-  addToCart: (productId: string, qty?: number) => void;
-  setQty: (productId: string, qty: number) => void;
-  removeFromCart: (productId: string) => void;
+  addToCart: (productId: string, qty?: number, colorName?: string) => void;
+  setQty: (productId: string, qty: number, colorName?: string) => void;
+  removeFromCart: (productId: string, colorName?: string) => void;
   clearCart: () => void;
   toggleWishlist: (productId: string) => void;
   previewTheme: (t: ThemeId | null) => void;
+  previewFont: (f: FontId | null) => void;
 }
 
 const StoreContext = createContext<StoreApi | null>(null);
+
+/** Same product + same selected colour = same cart line. */
+function sameLine(l: CartLine, productId: string, colorName?: string) {
+  return l.productId === productId && (l.colorName ?? "") === (colorName ?? "");
+}
 
 function detectDevice() {
   const ua = navigator.userAgent;
@@ -85,6 +92,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [preview, setPreview] = useState<ThemeId | null>(null);
+  const [fontPreview, setFontPreview] = useState<FontId | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -131,11 +139,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [state.cart, state.wishlist, hydrated]);
 
   const activeTheme = preview ?? state.settings.theme;
+  const activeFont = fontPreview ?? state.settings.font ?? "font-serif-classic";
+
   useEffect(() => {
     const el = document.documentElement;
     el.classList.remove(...THEME_CLASSES);
     el.classList.add(activeTheme);
   }, [activeTheme]);
+
+  useEffect(() => {
+    const el = document.documentElement;
+    const fontClasses = [
+      "font-serif-classic",
+      "font-sans-modern",
+      "font-display-chic",
+      "font-elegant-script",
+      "font-minimalist-clean",
+      "font-luxury-serif",
+      "font-professional-mono",
+      "font-organic-soft",
+      "font-vintage-type",
+      "font-contemporary-bold",
+    ];
+    el.classList.remove(...fontClasses);
+    el.classList.add(activeFont);
+  }, [activeFont]);
 
   // Visitor tracking — one ping per page view.
   useEffect(() => {
@@ -164,27 +192,33 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const api = useMemo<StoreApi>(
     () => ({
       ...state,
-      settings: { ...state.settings, theme: activeTheme },
+      settings: { ...state.settings, theme: activeTheme, font: activeFont },
       hydrated,
       loading,
       refresh,
       previewTheme: setPreview,
-      addToCart: (productId, qty = 1) =>
+      previewFont: setFontPreview,
+      addToCart: (productId, qty = 1, colorName) =>
         patch((s) => ({
           ...s,
-          cart: s.cart.some((l) => l.productId === productId)
-            ? s.cart.map((l) => (l.productId === productId ? { ...l, qty: l.qty + qty } : l))
-            : [...s.cart, { productId, qty }],
+          cart: s.cart.some((l) => sameLine(l, productId, colorName))
+            ? s.cart.map((l) =>
+                sameLine(l, productId, colorName) ? { ...l, qty: l.qty + qty } : l,
+              )
+            : [...s.cart, { productId, qty, ...(colorName ? { colorName } : {}) }],
         })),
-      setQty: (productId, qty) =>
+      setQty: (productId, qty, colorName) =>
         patch((s) => ({
           ...s,
           cart: s.cart
-            .map((l) => (l.productId === productId ? { ...l, qty: Math.max(1, qty) } : l))
+            .map((l) => (sameLine(l, productId, colorName) ? { ...l, qty: Math.max(1, qty) } : l))
             .filter((l) => l.qty > 0),
         })),
-      removeFromCart: (productId) =>
-        patch((s) => ({ ...s, cart: s.cart.filter((l) => l.productId !== productId) })),
+      removeFromCart: (productId, colorName) =>
+        patch((s) => ({
+          ...s,
+          cart: s.cart.filter((l) => !sameLine(l, productId, colorName)),
+        })),
       clearCart: () => patch((s) => ({ ...s, cart: [] })),
       toggleWishlist: (productId) =>
         patch((s) => ({
@@ -194,7 +228,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             : [...s.wishlist, productId],
         })),
     }),
-    [state, hydrated, loading, refresh, patch, activeTheme],
+    [state, hydrated, loading, refresh, patch, activeTheme, activeFont],
   );
 
   return <StoreContext.Provider value={api}>{children}</StoreContext.Provider>;

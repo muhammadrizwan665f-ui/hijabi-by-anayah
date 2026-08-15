@@ -56,7 +56,7 @@ function blankProduct(sortOrder: number): Product {
     features: [],
     specs: [],
     included: [],
-    warranty: "3-day exchange on unworn pieces",
+    warranty: "Hand-checked premium quality",
     shippingDetails: "Delivery in 2–4 working days across Pakistan.",
     flashSale: false,
     flashEndsAt: null,
@@ -586,7 +586,7 @@ function ProductForm({
       </div>
 
       <div className="sm:col-span-2">
-        <Label>Images</Label>
+        <Label>Main Gallery / All Colours Images</Label>
         <div className="mt-2 flex flex-wrap gap-3">
           {value.images.map((src, i) => (
             <div key={`${src}-${i}`} className="relative">
@@ -658,6 +658,25 @@ function ProductForm({
                   value={color.hex || "#C9A88A"}
                   onChange={(e) => updateColor(ci, { ...color, hex: e.target.value })}
                 />
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">Stock</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    className="w-24"
+                    placeholder="—"
+                    value={color.stock ?? ""}
+                    onChange={(e) =>
+                      updateColor(ci, {
+                        ...color,
+                        stock:
+                          e.target.value === ""
+                            ? null
+                            : Math.max(0, Math.trunc(Number(e.target.value) || 0)),
+                      })
+                    }
+                  />
+                </div>
                 <Button
                   type="button"
                   variant="ghost"

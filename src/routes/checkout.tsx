@@ -17,6 +17,7 @@ import {
 import { Copy, Loader2, Upload } from "lucide-react";
 import { PROVINCES, computeTotals, formatPKR, lineTotal } from "@/lib/pricing";
 import { useStore } from "@/lib/store";
+import { colorImage } from "@/lib/product-image";
 import { createOrder, getPaymentAccount } from "@/lib/shop.functions";
 import type { PaymentMethodId } from "@/lib/types";
 
@@ -27,7 +28,7 @@ export const Route = createFileRoute("/checkout")({
       {
         name: "description",
         content:
-          "Complete your Hijabi By Anayah order with cash on delivery, EasyPaisa, JazzCash or bank transfer.",
+          "Complete your Hijabi By Anayah order with cash on delivery, EasyPaisa, Raast or bank transfer.",
       },
       { property: "og:title", content: "Secure Checkout — Hijabi By Anayah" },
       { property: "og:description", content: "COD and advance payment options for Pakistan." },
@@ -101,7 +102,11 @@ function Checkout() {
   });
 
   const lines = cart
-    .map((l) => ({ product: products.find((p) => p.id === l.productId)!, qty: l.qty }))
+    .map((l) => ({
+      product: products.find((p) => p.id === l.productId)!,
+      qty: l.qty,
+      colorName: l.colorName,
+    }))
     .filter((l) => l.product);
 
   const activeMethods = payments.filter((p) => p.enabled);
@@ -128,12 +133,15 @@ function Checkout() {
       toast.error(parsed.error.issues[0]?.message ?? "Please check your details");
       return;
     }
+    // Payment screenshot is now optional as requested
+    /*
     if (selected?.requiresProof && !screenshot) {
       toast.error("Payment screenshot required", {
         description: `Upload your ${selected.label} payment screenshot so we can verify it.`,
       });
       return;
     }
+    */
 
     setSubmitting(true);
     try {
@@ -143,7 +151,11 @@ function Checkout() {
 
       const order = await createOrder({
         data: {
-          lines: lines.map(({ product, qty }) => ({ productId: product.id, qty })),
+          lines: lines.map(({ product, qty, colorName }) => ({
+            productId: product.id,
+            qty,
+            ...(colorName ? { colorName } : {}),
+          })),
           paymentCode: method,
           urgent: form.urgent,
           customer: {
@@ -220,7 +232,7 @@ function Checkout() {
                         <RadioGroupItem value="standard" />
                         <div className="flex flex-col">
                           <span className="text-sm font-medium">Karachi Standard Delivery</span>
-                          <span className="text-[10px] text-muted-foreground italic">1-2 working days · 300 advance</span>
+                          <span className="text-[10px] text-muted-foreground italic">Karachi delivery 1-3 days · 0 advance (100% COD)</span>
                         </div>
                       </div>
                       <span className="text-sm font-bold">300 DC</span>
@@ -229,8 +241,8 @@ function Checkout() {
                       <div className="flex items-center gap-3">
                         <RadioGroupItem value="urgent" />
                         <div className="flex flex-col">
-                          <span className="text-sm font-medium">Karachi Express (24 Hours)</span>
-                          <span className="text-[10px] text-muted-foreground italic">Urgent delivery · 450 advance</span>
+                          <span className="text-sm font-medium">Karachi Express (Urgent)</span>
+                          <span className="text-[10px] text-muted-foreground italic">24 Hours delivery · 0 advance (100% COD)</span>
                         </div>
                       </div>
                       <span className="text-sm font-bold text-primary">450 DC</span>
@@ -318,7 +330,7 @@ function Checkout() {
                         {m.requiresProof ? (
                           <div>
                             <Label htmlFor="proof" className="text-xs font-semibold">
-                              Upload payment screenshot
+                              Upload payment screenshot (optional)
                             </Label>
                             <label
                               htmlFor="proof"
@@ -361,12 +373,19 @@ function Checkout() {
         <aside className="premium-card h-fit p-6 lg:sticky lg:top-28">
           <h2 className="font-display text-lg font-bold">Order summary</h2>
           <ul className="mt-4 space-y-3">
-            {lines.map(({ product, qty }) => (
-              <li key={product.id} className="flex gap-3 text-sm">
-                <img src={product.images[0]} alt="" loading="lazy" className="size-12 rounded-xl object-cover" />
+            {lines.map(({ product, qty, colorName }, i) => (
+              <li key={`${product.id}-${colorName}-${i}`} className="flex gap-3 text-sm">
+                <img src={colorImage(product, colorName)} alt="" loading="lazy" className="size-12 rounded-xl object-cover" />
                 <div className="flex-1">
                   <p className="font-medium leading-tight">{product.name}</p>
-                  <p className="text-xs text-muted-foreground">Qty {qty}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-xs text-muted-foreground">Qty {qty}</p>
+                    {colorName && (
+                      <span className="inline-flex items-center rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                        {colorName}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <span className="font-semibold">{formatPKR(lineTotal(product, qty).total)}</span>
               </li>
@@ -391,26 +410,28 @@ function Checkout() {
             </div>
             <div className="rounded-xl bg-surface border border-primary/10 p-3 text-[11px] text-primary space-y-2">
               <p className="font-bold flex items-center gap-1.5">
-                <span className="text-base">🚨</span> Note: Payment in Advance Required
+                <span className="text-base">🚀</span> Delivery & Payment Info
               </p>
               <ul className="list-inside list-disc space-y-1 opacity-90">
                 {form.city?.toLowerCase().trim() === "karachi" ? (
                   <>
-                    <li>Standard Karachi: {formatPKR(300)} advance required.</li>
-                    <li>Karachi Express: {formatPKR(450)} advance required.</li>
-                    <li>Estimated delivery: 1-2 days.</li>
+                    <li>Karachi: 0 advance (100% Cash on Delivery possible).</li>
+                    <li>Estimated delivery: {form.urgent ? "24 Hours (Urgent)" : "1-3 working days"}.</li>
                   </>
                 ) : (
                   <>
-                    <li>Minimum {formatPKR(350)} required for order confirmation.</li>
-                    <li>Leopard Courier: Minimum {formatPKR(450)} advance required.</li>
-                    <li>Out of city: 5-6 working days via TRAX.</li>
+                    <li>Non-Karachi cities: Advance payment required for confirmation.</li>
+                    <li>Minimum {formatPKR(350)} advance required.</li>
+                    <li>Leopard Courier: {formatPKR(450)} advance required.</li>
+                    <li>Out of city delivery: 4-6 days.</li>
                   </>
                 )}
               </ul>
               <p className="font-medium mt-2 pt-2 border-t border-primary/10">
                 {method === "cod"
-                  ? `Pay advance now, rest on delivery.`
+                  ? form.city?.toLowerCase().trim() === "karachi"
+                    ? "Cash on delivery available with 0 advance."
+                    : `Pay advance now, rest on delivery.`
                   : `Pay total amount to confirm your order.`}
               </p>
             </div>
@@ -428,7 +449,7 @@ function Checkout() {
           <p className="mt-3 text-center text-[10px] text-muted-foreground leading-relaxed">
             Delivery charges apply as per courier receipt shared by service.
             <br />
-            Estimated delivery: Karachi 1-2 days · Nationwide 3-6 days
+            Estimated delivery: Karachi 1-3 days · Nationwide 3-6 days
           </p>
         </aside>
       </form>

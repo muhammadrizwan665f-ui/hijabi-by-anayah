@@ -148,16 +148,16 @@ export function Footer() {
               </li>
               <li className="flex items-start gap-2">
                 <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
-                <span>Secure checkout & easy exchange</span>
+                <span>Secure checkout&nbsp;</span>
               </li>
             </ul>
           </div>
         </div>
 
         <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-border pt-6 text-center text-xs text-muted-foreground sm:flex-row sm:text-left">
-          <p>© {new Date().getFullYear()} Hijabi By Anayah. All rights reserved.</p>
+          <p>© 2021 Hijabi By Anayah. All rights reserved.</p>
           <p className="flex flex-wrap justify-center gap-x-2">
-            <span>EasyPaisa</span> · <span>JazzCash</span> · <span>Bank Transfer</span> · <span>COD</span>
+            <span>EasyPaisa</span> · <span>Raast</span> · <span>Bank Transfer</span> · <span>COD</span>
           </p>
         </div>
       </div>

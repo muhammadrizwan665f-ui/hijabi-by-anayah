@@ -8,9 +8,10 @@ import {
   rowToPayment,
   rowToProduct,
   rowToVisitor,
+  rowToNotification,
   toSettings,
 } from "./mappers";
-import type { AnalyticsSummary, Product, VisitorRow } from "./types";
+import type { AnalyticsSummary, Notification, Product, VisitorRow } from "./types";
 
 const STATUSES = [
   "Pending",
@@ -46,18 +47,45 @@ export const getAdminBootstrap = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertAdmin(context as never);
     const supabase = context.supabase;
-    const [products, payments, orders, settings] = await Promise.all([
+    const [products, payments, orders, settings, notifications] = await Promise.all([
       supabase.from("products").select("*").order("sort_order"),
       supabase.from("payment_methods").select("*").order("sort_order"),
       supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(500),
       supabase.from("site_settings").select("data").maybeSingle(),
+      supabase.from("notifications").select("*").order("created_at", { ascending: false }).limit(50),
     ]);
     return {
       products: (products.data ?? []).map(rowToProduct),
       payments: (payments.data ?? []).map(rowToPayment),
       orders: (orders.data ?? []).map(rowToOrder),
       settings: toSettings(settings.data?.data),
+      notifications: (notifications.data ?? []).map(rowToNotification),
     };
+  });
+
+export const markNotificationRead = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string }) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context as never);
+    const { error } = await context.supabase
+      .from("notifications")
+      .update({ is_read: true } as never)
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const markAllNotificationsRead = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context as never);
+    const { error } = await context.supabase
+      .from("notifications")
+      .update({ is_read: true } as never)
+      .eq("is_read", false);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 export const saveProduct = createServerFn({ method: "POST" })
@@ -208,6 +236,19 @@ export const updateOrder = createServerFn({ method: "POST" })
 
     const { error } = await context.supabase.from("orders").update(patch as never).eq("order_no", data.orderNo);
     if (error) throw new Error(error.message);
+
+    // Notification for Customer on status update
+    if (data.status && data.status !== current.status) {
+      // In a real app, we might find the user_id associated with this order's phone/email
+      // For now, we'll just insert a notification without a user_id (publicly trackable by order number)
+      await context.supabase.from("notifications").insert({
+        order_no: data.orderNo,
+        title: "Order Status Updated",
+        message: `Your order ${data.orderNo} status is now ${data.status}.`,
+        type: "customer_status_update",
+        is_read: false,
+      });
+    }
 
     // Inventory: give stock back once when an order is cancelled/refunded/returned.
     const finalStatus = (patch["status"] as string | undefined) ?? current.status;

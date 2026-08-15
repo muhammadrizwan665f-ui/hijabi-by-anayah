@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Reveal } from "@/components/site/reveal";
 import { computeTotals, formatPKR, lineTotal, unitPrice } from "@/lib/pricing";
 import { useStore } from "@/lib/store";
+import { colorImage } from "@/lib/product-image";
 
 export const Route = createFileRoute("/cart")({
   head: () => ({
@@ -32,7 +33,11 @@ function Cart() {
   const navigate = useNavigate();
 
   const lines = cart
-    .map((l) => ({ product: products.find((p) => p.id === l.productId)!, qty: l.qty }))
+    .map((l) => ({
+      product: products.find((p) => p.id === l.productId)!,
+      qty: l.qty,
+      colorName: l.colorName,
+    }))
     .filter((l) => l.product);
 
   const bestMethod = payments.filter((p) => p.enabled).sort((a, b) => b.discountPct - a.discountPct)[0] ?? null;
@@ -70,14 +75,14 @@ function Cart() {
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_380px]">
         <div className="space-y-4">
-          {lines.map(({ product, qty }, i) => {
+          {lines.map(({ product, qty, colorName }, i) => {
             const t = lineTotal(product, qty);
             return (
-              <Reveal key={product.id} delay={i * 0.05}>
+              <Reveal key={`${product.id}-${colorName ?? ""}`} delay={i * 0.05}>
                 <div className="premium-card flex gap-4 p-4">
                   <Link to="/product/$slug" params={{ slug: product.slug }} className="shrink-0">
                     <img
-                      src={product.images[0]}
+                      src={colorImage(product, colorName)}
                       alt={product.name}
                       loading="lazy"
                       width={1024}
@@ -95,6 +100,11 @@ function Cart() {
                         >
                           {product.name}
                         </Link>
+                        {colorName ? (
+                          <p className="mt-0.5 text-xs font-medium">
+                            Colour: <span className="text-muted-foreground">{colorName}</span>
+                          </p>
+                        ) : null}
                         <p className="mt-0.5 text-sm text-muted-foreground">
                           {formatPKR(unitPrice(product))} each
                         </p>
@@ -103,7 +113,7 @@ function Cart() {
                         variant="ghost"
                         size="icon"
                         aria-label="Remove item"
-                        onClick={() => removeFromCart(product.id)}
+                        onClick={() => removeFromCart(product.id, colorName)}
                       >
                         <Trash2 className="size-4" />
                       </Button>
@@ -116,7 +126,7 @@ function Cart() {
                           size="icon"
                           className="size-8 rounded-full"
                           aria-label="Decrease quantity"
-                          onClick={() => setQty(product.id, qty - 1)}
+                          onClick={() => setQty(product.id, qty - 1, colorName)}
                         >
                           <Minus className="size-3.5" />
                         </Button>
@@ -126,7 +136,7 @@ function Cart() {
                           size="icon"
                           className="size-8 rounded-full"
                           aria-label="Increase quantity"
-                          onClick={() => setQty(product.id, qty + 1)}
+                          onClick={() => setQty(product.id, qty + 1, colorName)}
                         >
                           <Plus className="size-3.5" />
                         </Button>
@@ -170,7 +180,7 @@ function Cart() {
               <Truck className="size-4 text-primary" /> Estimated delivery: 1-3 working days
             </li>
             <li className="flex items-center gap-2">
-              <ShieldCheck className="size-4 text-primary" /> Secure checkout & easy 3-day exchange
+              <ShieldCheck className="size-4 text-primary" /> Secure checkout & verified quality
             </li>
           </ul>
         </aside>

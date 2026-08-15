@@ -1,11 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Bell } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getOrderByNumber } from "@/lib/shop.functions";
 import type { Order } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { formatPKR } from "@/lib/pricing";
 import { useStore } from "@/lib/store";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { rowToNotification } from "@/lib/mappers";
 
 export const Route = createFileRoute("/order/$orderId")({
   head: ({ params }) => ({
@@ -30,6 +33,39 @@ function OrderPage() {
     void getOrderByNumber({ data: { orderNo: orderId } })
       .then(setOrder)
       .catch(() => setOrder(null));
+  }, [orderId]);
+
+  useEffect(() => {
+    const sub = supabase
+      .channel(`order_${orderId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `order_no=eq.${orderId}`,
+        },
+        (payload) => {
+          const notif = rowToNotification(payload.new as any);
+          if (notif.type === "customer_status_update") {
+            toast.info(notif.title, {
+              description: notif.message,
+              duration: 8000,
+              icon: <Bell className="size-4 text-primary" />,
+            });
+            // Refresh order data
+            void getOrderByNumber({ data: { orderNo: orderId } })
+              .then(setOrder)
+              .catch(() => undefined);
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(sub);
+    };
   }, [orderId]);
 
   return (

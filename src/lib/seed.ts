@@ -3,9 +3,9 @@ import type { BlogPost, Settings } from "./types";
 export const CATEGORIES = [
   { id: "abayah", name: "Abayah", blurb: "Elegant and modest abayahs" },
   { id: "namaz-chadar", name: "Namaz Chadar", blurb: "Soft, breathable prayer chadars" },
-  { id: "inner-caps", name: "Hijab Inner/caps", blurb: "Essential base layers for a clean drape" },
+  { id: "inner-caps", name: "Hijab Caps", blurb: "Essential base layers for a clean drape" },
   { id: "accessories", name: "Accessories", blurb: "Magnet pins, brooches & more" },
-  { id: "basic-hijabs", name: "Basic/ Plain Hijabs", blurb: "Everyday essentials in every shade" },
+  { id: "basic-hijabs", name: "Basic Hijab", blurb: "Everyday essentials in every shade" },
   { id: "printed", name: "Printed", blurb: "Beautiful patterns and floral designs" },
   { id: "fancy-stoles", name: "Fancy Stoles", blurb: "Party and formal wear stoles" },
   { id: "silk-stoles", name: "Silk Stoles", blurb: "Luxurious silk and satin drapes" },
@@ -77,6 +77,7 @@ export const SEED_SETTINGS: Settings = {
     },
   ],
   categories: CATEGORIES,
+  tickerSpeed: "medium",
 };
 
 export const SEED_BLOG: BlogPost[] = [

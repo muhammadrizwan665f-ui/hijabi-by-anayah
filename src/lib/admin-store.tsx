@@ -10,13 +10,13 @@ import {
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { getAdminBootstrap } from "./admin.functions";
-import { toSettings } from "./mappers";
-import type { Order, PaymentMethod, Product, Settings } from "./types";
+import { rowToNotification, toSettings } from "./mappers";
+import type { Notification, Order, PaymentMethod, Product, Settings } from "./types";
 
 interface AdminData {
   products: Product[];
   payments: PaymentMethod[];
-  
+  notifications: Notification[];
   orders: Order[];
   settings: Settings;
 }
@@ -34,7 +34,7 @@ interface AdminApi extends AdminData {
 const emptyData: AdminData = {
   products: [],
   payments: [],
-  
+  notifications: [],
   orders: [],
   settings: toSettings({}),
 };
@@ -76,6 +76,36 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     })();
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (isAdmin) {
+      const sub = supabase
+        .channel("admin_notifications")
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "notifications" },
+          (payload) => {
+            const notif = rowToNotification(payload.new as any);
+            setData((prev) => ({
+              ...prev,
+              notifications: [notif, ...prev.notifications].slice(0, 50),
+            }));
+            // Show real-time toast
+            import("sonner").then(({ toast }) => {
+              toast.info(notif.title, {
+                description: notif.message,
+                duration: 5000,
+              });
+            });
+          },
+        )
+        .subscribe();
+      return () => {
+        void supabase.removeChannel(sub);
+      };
+    }
+    return undefined;
+  }, [isAdmin]);
 
   useEffect(() => {
     if (session) void reload();

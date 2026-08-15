@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { formatPKR } from "@/lib/pricing";
 import { useAdmin } from "@/lib/admin-store";
 import { getPaymentProofUrl, updateOrder } from "@/lib/admin.functions";
+import { colorImage } from "@/lib/product-image";
 import type { OrderStatus } from "@/lib/types";
 
 const STATUSES: OrderStatus[] = [
@@ -33,7 +34,7 @@ export const Route = createFileRoute("/admin/orders")({
 });
 
 function AdminOrders() {
-  const { orders, reload } = useAdmin();
+  const { orders, products, reload } = useAdmin();
   const setOrderStatus = (orderNo: string, status: string, trackingNumber?: string) => {
     void updateOrder({
       data: { orderNo, status: status as never, ...(trackingNumber ? { trackingNumber } : {}) },
@@ -120,7 +121,7 @@ function AdminOrders() {
       ) : (
         <div className="mt-6 space-y-4">
           {list.map((o) => (
-            <OrderRow key={o.id} order={o} reload={reload} setOrderStatus={setOrderStatus} />
+            <OrderRow key={o.id} order={o} products={products} reload={reload} setOrderStatus={setOrderStatus} />
           ))}
         </div>
       )}
@@ -128,7 +129,7 @@ function AdminOrders() {
   );
 }
 
-function OrderRow({ order: o, reload, setOrderStatus }: { order: any; reload: () => Promise<void>; setOrderStatus: any }) {
+function OrderRow({ order: o, products, reload, setOrderStatus }: { order: any; products: any[]; reload: () => Promise<void>; setOrderStatus: any }) {
   const [viewingProof, setViewingProof] = useState(false);
   const [proofUrl, setProofUrl] = useState<string | null>(null);
 
@@ -175,16 +176,41 @@ function OrderRow({ order: o, reload, setOrderStatus }: { order: any; reload: ()
         </div>
       </div>
 
-      <ul className="mt-4 space-y-1 text-sm">
-        {o.lines.map((l: any) => (
-          <li key={l.productId} className="flex justify-between">
-            <span>
-              {l.name} × {l.qty}
-            </span>
-            <span>{formatPKR(l.lineTotal)}</span>
-          </li>
-        ))}
+      <ul className="mt-4 space-y-2 text-sm">
+        {o.lines.map((l: any, i: number) => {
+          const product = products.find((p) => p.id === l.productId);
+          const img = product ? colorImage(product, l.colorName) : "";
+          return (
+            <li key={`${l.productId}-${i}`} className="flex gap-3 border-b border-border/40 pb-2 last:border-0 last:pb-0">
+              {img ? (
+                <img
+                  src={img}
+                  alt={l.colorName ? `${l.name} — ${l.colorName}` : l.name}
+                  loading="lazy"
+                  className="size-12 shrink-0 rounded-lg object-cover ring-1 ring-border"
+                />
+              ) : null}
+              <div className="min-w-0 flex-1">
+                <div className="flex justify-between gap-2">
+                  <span className="font-medium">
+                    {l.name} × {l.qty}
+                  </span>
+                  <span className="text-muted-foreground">{formatPKR(l.lineTotal)}</span>
+                </div>
+                {l.colorName && (
+                  <div className="mt-0.5 flex items-center gap-2">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Color:</span>
+                    <span className="inline-flex items-center rounded-full bg-surface px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset ring-border">
+                      {l.colorName}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </li>
+          );
+        })}
       </ul>
+
 
       {o.customer.notes && (
         <div className="mt-3 rounded-lg bg-surface p-2.5 text-xs italic text-muted-foreground">
@@ -221,15 +247,13 @@ function OrderRow({ order: o, reload, setOrderStatus }: { order: any; reload: ()
           />
         </div>
         <div className="flex items-center gap-3">
-          {o.paymentStatus !== "Not Required" && (
+          {o.paymentStatus !== "Not Required" && o.paymentStatus !== "Verified" && (
             <span
               className={cn(
                 "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-                o.paymentStatus === "Verified"
-                  ? "bg-green-100 text-green-700"
-                  : o.paymentStatus === "Rejected"
-                    ? "bg-red-100 text-red-700"
-                    : "bg-amber-100 text-amber-700",
+                o.paymentStatus === "Rejected"
+                  ? "bg-red-100 text-red-700"
+                  : "bg-amber-100 text-amber-700",
               )}
             >
               {o.paymentStatus}
@@ -251,8 +275,35 @@ function OrderRow({ order: o, reload, setOrderStatus }: { order: any; reload: ()
               </Button>
             </div>
             <div className="flex-1 overflow-auto p-4 flex flex-col items-center gap-4">
+              <ul className="w-full space-y-2 rounded-xl bg-surface p-3">
+                {o.lines.map((l: any, i: number) => {
+                  const product = products.find((p) => p.id === l.productId);
+                  const img = product ? colorImage(product, l.colorName) : "";
+                  return (
+                    <li key={`proof-${l.productId}-${i}`} className="flex items-center gap-3 text-sm">
+                      {img ? (
+                        <img
+                          src={img}
+                          alt={l.colorName ? `${l.name} — ${l.colorName}` : l.name}
+                          className="size-10 shrink-0 rounded-lg object-cover ring-1 ring-border"
+                        />
+                      ) : null}
+                      <span className="min-w-0 flex-1 truncate font-medium">
+                        {l.name} × {l.qty}
+                        {l.colorName ? (
+                          <span className="ml-2 rounded-full bg-card px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ring-1 ring-inset ring-border">
+                            {l.colorName}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="text-muted-foreground">{formatPKR(l.lineTotal)}</span>
+                    </li>
+                  );
+                })}
+              </ul>
               {proofUrl ? (
                 <>
+
                   <a
                     href={proofUrl}
                     target="_blank"
@@ -271,30 +322,30 @@ function OrderRow({ order: o, reload, setOrderStatus }: { order: any; reload: ()
                       variant="outline"
                       className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
                       onClick={() => {
-                        void updateOrder({ data: { orderNo: o.id, paymentStatus: "Verified" } })
+                        void updateOrder({ data: { orderNo: o.id, paymentStatus: "Verified", status: "Confirmed" } })
                           .then(() => {
-                            toast.success("Payment verified");
+                            toast.success("Payment verified & Order confirmed");
                             setViewingProof(false);
                             void reload();
                           })
                           .catch(() => undefined);
                       }}
                     >
-                      Verify Payment
+                      Verify & Confirm
                     </Button>
                     <Button
                       variant="destructive"
                       onClick={() => {
-                        void updateOrder({ data: { orderNo: o.id, paymentStatus: "Rejected" } })
+                        void updateOrder({ data: { orderNo: o.id, paymentStatus: "Rejected", status: "Cancelled" } })
                           .then(() => {
-                            toast.error("Payment rejected");
+                            toast.error("Payment rejected & Order cancelled");
                             setViewingProof(false);
                             void reload();
                           })
                           .catch(() => undefined);
                       }}
                     >
-                      Reject
+                      Reject & Cancel
                     </Button>
                   </div>
                 </>

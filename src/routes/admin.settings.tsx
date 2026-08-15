@@ -9,10 +9,10 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useAdmin } from "@/lib/admin-store";
 import { useStore } from "@/lib/store";
-import { saveSettings } from "@/lib/admin.functions";
-import { THEMES } from "@/lib/theme";
+import { saveSettings, uploadProductImage } from "@/lib/admin.functions";
+import { FONTS, THEMES } from "@/lib/theme";
 import { cn } from "@/lib/utils";
-import type { Settings, ThemeId } from "@/lib/types";
+import type { FontId, Settings, ThemeId } from "@/lib/types";
 
 export const Route = createFileRoute("/admin/settings")({
   component: AdminSettings,
@@ -20,12 +20,15 @@ export const Route = createFileRoute("/admin/settings")({
 
 function AdminSettings() {
   const { settings, reload } = useAdmin();
-  const { previewTheme, refresh } = useStore();
+  const { previewTheme, previewFont, refresh } = useStore();
   const [draft, setDraft] = useState<Settings>(settings);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => setDraft(settings), [settings]);
-  useEffect(() => () => previewTheme(null), [previewTheme]);
+  useEffect(() => () => {
+    previewTheme(null);
+    previewFont(null);
+  }, [previewTheme, previewFont]);
 
   const set = <K extends keyof Settings>(key: K, value: Settings[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
@@ -35,6 +38,11 @@ function AdminSettings() {
     previewTheme(theme);
   }
 
+  function pickFont(font: FontId) {
+    set("font", font);
+    previewFont(font);
+  }
+
   async function save() {
     setSaving(true);
     try {
@@ -42,6 +50,7 @@ function AdminSettings() {
       await reload();
       await refresh();
       previewTheme(null);
+      previewFont(null);
       toast.success("Settings saved", { description: "The storefront is updated for everyone." });
     } catch {
       toast.error("Could not save settings. Please try again.");
@@ -100,6 +109,41 @@ function AdminSettings() {
                 </div>
                 <p className="mt-3 font-display font-semibold">{t.name}</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">{t.description}</p>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="premium-card mt-6 p-6">
+        <div className="flex items-center gap-2">
+          <h2 className="font-display text-lg font-bold">Typography &amp; Fonts</h2>
+          <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-xs text-muted-foreground">
+            <Eye className="size-3" /> live preview
+          </span>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Select a font pair to change the visual identity of your store.
+        </p>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {FONTS.map((f) => {
+            const active = draft.font === f.id || (!draft.font && f.id === "font-serif-classic");
+            return (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => pickFont(f.id)}
+                className={cn(
+                  "rounded-2xl border p-4 text-left transition-all hover:shadow-soft",
+                  active ? "border-primary ring-2 ring-primary/30" : "border-border",
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <span className={cn("text-xl", f.previewClass)}>Aa</span>
+                  {active ? <Check className="size-4 text-primary" /> : null}
+                </div>
+                <p className="mt-3 font-display font-semibold">{f.name}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{f.description}</p>
               </button>
             );
           })}
@@ -264,6 +308,33 @@ function AdminSettings() {
                 onChange={(v) => set("allowGuestCheckout", v)}
               />
             </div>
+            <div className="mt-4">
+              <Label>Product Ticker Speed</Label>
+              <div className="mt-2 flex gap-2">
+                {(["fast", "medium", "slow"] as const).map((speed) => (
+                  <Button
+                    key={speed}
+                    variant={draft.tickerSpeed === speed ? "default" : "outline"}
+                    size="sm"
+                    className="capitalize"
+                    onClick={() => set("tickerSpeed", speed)}
+                  >
+                    {speed}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="mt-4 pt-2 border-t border-border">
+              <ToggleRow
+                id="show-ticker"
+                label="Show Product Ticker"
+                checked={draft.showTicker ?? true}
+                onChange={(v) => set("showTicker", v)}
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                Toggle the scrolling product strip on the homepage.
+              </p>
+            </div>
           </div>
         </section>
 
@@ -329,6 +400,158 @@ function AdminSettings() {
               <p className="col-span-full py-4 text-center text-xs text-muted-foreground">
                 No categories defined.
               </p>
+            )}
+          </div>
+        </section>
+        <section className="premium-card p-6 lg:col-span-2">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-lg font-bold">Hero Slideshow</h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const current = draft.heroSlides || [];
+                set("heroSlides", [...current, { image: "", mobileImage: "" }]);
+              }}
+            >
+              + Add Slide
+            </Button>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Manage the banners shown on the homepage. Upload high-quality images for Desktop and Mobile.
+          </p>
+          <div className="mt-5 space-y-6">
+            {(draft.heroSlides || []).map((slide, idx) => (
+              <div
+                key={idx}
+                className="relative rounded-2xl border border-border bg-background p-4 shadow-sm"
+              >
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute -right-2 -top-2 size-8 rounded-full border border-border bg-background text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => {
+                    const next = [...(draft.heroSlides || [])];
+                    next.splice(idx, 1);
+                    set("heroSlides", next);
+                  }}
+                >
+                  <X className="size-4" />
+                </Button>
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        Desktop Image
+                      </Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-[10px]"
+                        onClick={() => {
+                          const input = document.createElement("input");
+                          input.type = "file";
+                          input.accept = "image/*";
+                          input.onchange = async (e) => {
+                            const file = (e.target as HTMLInputElement).files?.[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = async () => {
+                              try {
+                                const { url } = await uploadProductImage({
+                                  data: { dataUrl: String(reader.result), name: file.name },
+                                });
+                                const next = [...(draft.heroSlides || [])];
+                                next[idx] = { ...slide, image: url };
+                                set("heroSlides", next);
+                                toast.success("Desktop image uploaded");
+                              } catch {
+                                toast.error("Upload failed");
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          };
+                          input.click();
+                        }}
+                      >
+                        Upload
+                      </Button>
+                    </div>
+                    <div className="group relative aspect-[1536/310] overflow-hidden rounded-xl border-2 border-dashed border-border transition-colors hover:border-primary/50">
+                      {slide.image ? (
+                        <img
+                          src={slide.image}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-[10px] font-bold text-muted-foreground">
+                          NO DESKTOP IMAGE
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        Mobile Image
+                      </Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-[10px]"
+                        onClick={() => {
+                          const input = document.createElement("input");
+                          input.type = "file";
+                          input.accept = "image/*";
+                          input.onchange = async (e) => {
+                            const file = (e.target as HTMLInputElement).files?.[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = async () => {
+                              try {
+                                const { url } = await uploadProductImage({
+                                  data: { dataUrl: String(reader.result), name: file.name },
+                                });
+                                const next = [...(draft.heroSlides || [])];
+                                next[idx] = { ...slide, mobileImage: url };
+                                set("heroSlides", next);
+                                toast.success("Mobile image uploaded");
+                              } catch {
+                                toast.error("Upload failed");
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          };
+                          input.click();
+                        }}
+                      >
+                        Upload
+                      </Button>
+                    </div>
+                    <div className="group relative aspect-[2/1] overflow-hidden rounded-xl border-2 border-dashed border-border transition-colors hover:border-primary/50">
+                      {slide.mobileImage || slide.image ? (
+                        <img
+                          src={slide.mobileImage || slide.image}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-[10px] font-bold text-muted-foreground">
+                          NO MOBILE IMAGE
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {(draft.heroSlides || []).length === 0 && (
+              <div className="rounded-2xl border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
+                No hero slides. Add one to show a banner on the homepage.
+              </div>
             )}
           </div>
         </section>

@@ -16,6 +16,7 @@ import { AdminProvider, useAdmin } from "@/lib/admin-store";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import AdminLogin from "@/components/admin/admin-login";
+import { NotificationBell } from "@/components/admin/notification-bell";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -122,6 +123,10 @@ function AdminLayout() {
       </aside>
 
       <div className="flex-1 w-full overflow-hidden">
+        <header className="hidden lg:flex sticky top-0 z-40 h-16 items-center justify-end border-b bg-card px-6">
+          <NotificationBell />
+        </header>
+        
         <nav className="sticky top-0 z-50 flex h-16 items-center justify-between border-b border-border bg-card px-4 lg:hidden">
           <Link to="/" className="flex items-center gap-2">
             <span className="gradient-brand flex size-8 items-center justify-center rounded-lg text-brand-foreground">
@@ -131,8 +136,10 @@ function AdminLayout() {
           </Link>
           
           <div className="flex items-center gap-2">
+            <NotificationBell />
             <Button 
               variant="outline" 
+
               size="sm" 
               className="text-xs h-8 px-2"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}

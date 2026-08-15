@@ -81,10 +81,14 @@ export function computeTotals(opts: {
     }
   }
 
-  const shipping = goods === 0 ? 0 : goods >= opts.settings.freeShippingOver ? 0 : rate;
+  const shipping = goods === 0 ? 0 : rate;
 
   const total = goods + shipping;
-  const advanceDue = opts.method?.id === "cod" ? shipping : total;
+  // For Karachi, allow 0 advance on COD as requested.
+  // Otherwise, advanceDue for COD is typically just the shipping (delivery charge).
+  const advanceDue = opts.method?.id === "cod" 
+    ? (isKarachi ? 0 : shipping)
+    : total;
 
   return { subtotal, bulkDiscount, couponDiscount, paymentDiscount, shipping, total, advanceDue, isUrgent };
 }

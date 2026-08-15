@@ -12,6 +12,18 @@ export type ThemeId =
   | "theme-black-white"
   | "theme-blue-white";
 
+export type FontId =
+  | "font-serif-classic"
+  | "font-sans-modern"
+  | "font-display-chic"
+  | "font-elegant-script"
+  | "font-minimalist-clean"
+  | "font-luxury-serif"
+  | "font-professional-mono"
+  | "font-organic-soft"
+  | "font-vintage-type"
+  | "font-contemporary-bold";
+
 /** Payment method codes are admin-editable, so this is a free-form string. */
 export type PaymentMethodId = string;
 
@@ -51,6 +63,8 @@ export interface ProductColor {
   name: string;
   hex: string;
   images: string[];
+  /** Colour-level stock. `null`/undefined means stock is not tracked for this colour. */
+  stock?: number | null;
 }
 
 export interface Product {
@@ -109,6 +123,8 @@ export interface PaymentMethod {
 export interface CartLine {
   productId: string;
   qty: number;
+  /** Selected colour name, when the product has colours. */
+  colorName?: string;
 }
 
 export interface Customer {
@@ -128,7 +144,7 @@ export interface Order {
   id: string;
   createdAt: string;
   customer: Customer;
-  lines: { productId: string; name: string; qty: number; unitPrice: number; lineTotal: number }[];
+  lines: { productId: string; name: string; qty: number; unitPrice: number; lineTotal: number; colorName?: string | undefined }[];
   paymentMethod: PaymentMethodId;
   
   subtotal: number;
@@ -147,6 +163,7 @@ export interface Order {
 
 export interface Settings {
   theme: ThemeId;
+  font?: FontId;
   brandName: string;
   tagline: string;
   whatsapp: string;
@@ -175,6 +192,8 @@ export interface Settings {
   privacyPolicy: string;
   heroSlides?: { image: string; mobileImage?: string; title?: string; subtitle?: string; link?: string }[];
   categories?: { id: string; name: string; blurb?: string }[];
+  tickerSpeed?: "fast" | "medium" | "slow";
+  showTicker?: boolean;
 }
 
 export interface BlogPost {
@@ -215,4 +234,15 @@ export interface AnalyticsSummary {
   devices: { device: string; visits: number }[];
   liveVisitors: VisitorRow[];
   recentVisitors: VisitorRow[];
+}
+
+export interface Notification {
+  id: string;
+  userId: string | null;
+  orderNo: string;
+  title: string;
+  message: string;
+  type: "admin_new_order" | "customer_status_update";
+  isRead: boolean;
+  createdAt: string;
 }

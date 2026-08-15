@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { ProductCard } from "@/components/site/product-card";
 import { Reveal, SectionHeading } from "@/components/site/reveal";
-import { CATEGORIES } from "@/lib/seed";
+import { CATEGORIES, SEED_SETTINGS } from "@/lib/seed";
 import { formatPKR, unitPrice } from "@/lib/pricing";
 import { useStore } from "@/lib/store";
 
@@ -41,7 +41,7 @@ const TRUST = [
   { Icon: Truck, title: "Fast Delivery", text: "2-4 days nationwide" },
   { Icon: Wallet, title: "Cash on Delivery", text: "Pay when it arrives" },
   { Icon: ShieldCheck, title: "Premium Fabrics", text: "Hand-checked quality" },
-  { Icon: RotateCcw, title: "Easy Exchange", text: "3-day exchange policy" },
+  { Icon: Sparkles, title: "Ethical Sourcing", text: "Direct from makers" },
 ];
 
 function Home() {
@@ -53,16 +53,10 @@ function Home() {
   const best = [...active].sort((a, b) => b.sold - a.sold).slice(0, 4);
   const trending = [...active].sort((a, b) => b.rating - a.rating).slice(0, 4);
 
-  const slides = settings.heroSlides?.length
-    ? settings.heroSlides
-    : [
-        {
-          image: "/products/banner-general-wide.jpg",
-          title: "Modesty, softly refined",
-          subtitle:
-            "Hijabs, namaz chadars and accessories chosen for their drape, weight and finish — made for everyday wear, delivered anywhere in Pakistan with cash on delivery.",
-        },
-      ];
+  // Filter out empty slides if they exist in DB
+  const slides = (settings.heroSlides || []).filter(s => s.image || s.mobileImage).length
+    ? settings.heroSlides!.filter(s => s.image || s.mobileImage)
+    : SEED_SETTINGS.heroSlides!;
 
   useEffect(() => {
     if (slides.length <= 1) return;
@@ -90,13 +84,13 @@ function Home() {
                 transition={{ duration: 0.8, ease: "easeInOut" }}
                 className="absolute inset-0"
               >
-                <Link to="/shop" className="block h-full w-full">
+                <div className="h-full w-full">
                   <img
                     src={currentSlide?.image}
                     alt={currentSlide?.title || "Hijabi By Anayah collection banner"}
                     className="h-full w-full object-cover"
                   />
-                </Link>
+                </div>
               </motion.div>
             </AnimatePresence>
           </div>
@@ -112,20 +106,20 @@ function Home() {
                 transition={{ duration: 0.8, ease: "easeInOut" }}
                 className="absolute inset-0"
               >
-                <Link to="/shop" className="block h-full w-full">
+                <div className="h-full w-full">
                   <img
                     src={currentSlide?.mobileImage || currentSlide?.image}
                     alt={currentSlide?.title || "Hijabi By Anayah collection banner"}
                     className="h-full w-full object-cover"
                   />
-                </Link>
+                </div>
               </motion.div>
             </AnimatePresence>
           </div>
 
           {slides.length > 1 && (
             <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 gap-2 sm:bottom-5">
-              {slides.map((_, i) => (
+              {slides.map((_: any, i: number) => (
                 <button
                   key={i}
                   onClick={() => setHeroIndex(i)}
@@ -145,41 +139,52 @@ function Home() {
 
 
       {/* PRODUCT TICKER */}
-      <section className="overflow-hidden border-y border-primary/10 bg-surface py-8">
-        <div className="flex whitespace-nowrap">
-          <motion.div
-            initial={{ x: 0 }}
-            animate={{ x: "-50%" }}
-            transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-            className="flex items-center gap-6 px-3"
-          >
-            {[...active, ...active, ...active].map((p, i) => (
-              <Link
-                key={`${p.id}-${i}`}
-                to="/product/$slug"
-                params={{ slug: p.slug }}
-                className="group flex w-[180px] shrink-0 items-center gap-3 rounded-full border border-primary/10 bg-surface px-4 py-2 shadow-sm transition-all hover:border-primary hover:shadow-md"
-              >
-                <img
-                  src={p.images[0] ?? "/placeholder.svg"}
-                  alt={p.name}
-                  className="size-11 flex-shrink-0 rounded-full object-cover outline outline-2 outline-offset-2 outline-transparent transition-all group-hover:outline-primary"
-                />
-                <div className="flex flex-col min-w-0">
-                  <span className="truncate text-xs font-bold leading-tight">{p.name}</span>
-                  <span className="text-[11px] font-bold text-primary">
-                    {formatPKR(unitPrice(p))}
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </motion.div>
-        </div>
-      </section>
+      {(settings.showTicker ?? true) && (
+        <section className="overflow-hidden border-y border-primary/10 bg-surface py-2.5">
+          <div className="flex whitespace-nowrap">
+            <motion.div
+              initial={{ x: 0 }}
+              animate={{ x: "-50%" }}
+              transition={{
+                duration:
+                  settings.tickerSpeed === "fast"
+                    ? 15
+                    : settings.tickerSpeed === "slow"
+                      ? 45
+                      : 30,
+                repeat: Infinity,
+                ease: "linear",
+              }}
+              className="flex items-center gap-6 px-3"
+            >
+              {[...active, ...active, ...active].map((p, i) => (
+                <Link
+                  key={`${p.id}-${i}`}
+                  to="/product/$slug"
+                  params={{ slug: p.slug }}
+                  className="group flex w-[180px] shrink-0 items-center gap-3 rounded-full border border-primary/10 bg-surface px-4 py-2 shadow-sm transition-all hover:border-primary hover:shadow-md"
+                >
+                  <img
+                    src={p.images[0] ?? "/placeholder.svg"}
+                    alt={p.name}
+                    className="size-11 flex-shrink-0 rounded-full object-cover outline outline-2 outline-offset-2 outline-transparent transition-all group-hover:outline-primary"
+                  />
+                  <div className="flex flex-col min-w-0">
+                    <span className="truncate text-xs font-bold leading-tight">{p.name}</span>
+                    <span className="text-[11px] font-bold text-primary">
+                      {formatPKR(unitPrice(p))}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </motion.div>
+          </div>
+        </section>
+      )}
 
       {/* Professional Category Selection */}
-      <section className="mx-auto max-w-7xl px-4 pt-4">
-        <div className="flex justify-center border-b border-primary/10 pb-8">
+      <section className="mx-auto max-w-7xl px-4 pt-2">
+        <div className="flex justify-center border-b border-primary/10 pb-2">
           <Select
             onValueChange={(val) => {
               if (val) window.location.href = `/shop?category=${encodeURIComponent(val)}`;
@@ -206,12 +211,21 @@ function Home() {
         </div>
       </section>
 
+      {/* TRENDING */}
+      <section className="mx-auto max-w-7xl px-4 pt-4">
+        <SectionHeading eyebrow="Trending" title="Highest rated right now" />
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-4">
+          {trending.map((p, i) => (
+            <ProductCard key={p.id} product={p} index={i} />
+          ))}
+        </div>
+      </section>
+
       {/* FLASH DEALS */}
       {flash.length > 0 ? (
-        <section className="mx-auto max-w-7xl px-4 pt-8">
+        <section className="mx-auto max-w-7xl px-4 pt-2">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div className="space-y-4">
-
               <div className="pt-4">
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-primary px-3 py-1 text-xs font-bold uppercase tracking-widest text-primary bg-surface">
                   <Zap className="size-3.5" /> Limited Offer
@@ -223,7 +237,7 @@ function Home() {
               <Link to="/deals">View all offers</Link>
             </Button>
           </div>
-          <div className="mt-8 grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-4">
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-4">
             {flash.map((p, i) => (
               <ProductCard key={p.id} product={p} index={i} />
             ))}
@@ -232,37 +246,27 @@ function Home() {
       ) : null}
 
       {/* BEST SELLERS */}
-      <section className="mx-auto max-w-7xl px-4 pt-10">
+      <section className="mx-auto max-w-7xl px-4 pt-3">
         <SectionHeading
           eyebrow="Best Selling"
           title="Most loved this month"
           subtitle="Ranked by real orders delivered across Pakistan."
         />
-        <div className="mt-10 grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-4">
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-4">
           {best.map((p, i) => (
             <ProductCard key={p.id} product={p} index={i} />
           ))}
         </div>
       </section>
 
-      {/* TRENDING */}
-      <section className="mx-auto max-w-7xl px-4 pt-12">
-        <SectionHeading eyebrow="Trending" title="Highest rated right now" />
-        <div className="mt-10 grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-4">
-          {trending.map((p, i) => (
-            <ProductCard key={p.id} product={p} index={i} />
-          ))}
-        </div>
-      </section>
-
       {/* ALL PRODUCTS (if needed more volume) */}
-      <section className="mx-auto max-w-7xl px-4 pt-12">
+      <section className="mx-auto max-w-7xl px-4 pt-4">
         <SectionHeading
           eyebrow="Our Catalog"
           title="The full collection"
           subtitle="Every piece in stock and ready to ship."
         />
-        <div className="mt-10 grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-4">
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-4">
           {active.map((p, i) => (
             <ProductCard key={p.id} product={p} index={i} />
           ))}
@@ -271,14 +275,14 @@ function Home() {
 
 
       {/* REVIEWS */}
-      <section className="mt-24 border-y border-primary/10 bg-surface py-20">
+      <section className="mt-6 border-y border-primary/10 bg-surface py-8">
         <div className="mx-auto max-w-7xl px-4">
           <SectionHeading
             eyebrow="Reviews"
             title="Loved by 600,000+ customers"
             subtitle="Verified reviews from real delivered orders."
           />
-          <div className="mt-10 grid gap-5 md:grid-cols-3">
+          <div className="mt-6 grid gap-5 md:grid-cols-3">
             {active
               .flatMap((p) => p.reviews.map((r) => ({ ...r, product: p.name })))
               .slice(0, 3)
@@ -310,7 +314,7 @@ function Home() {
 
       {/* TRUST STRIP (Moved to end) */}
       <section className="border-y border-primary/10 bg-surface/50">
-        <div className="mx-auto grid max-w-7xl gap-6 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto grid max-w-7xl gap-6 px-4 py-8 sm:grid-cols-2 lg:grid-cols-4">
           {TRUST.map(({ Icon, title, text }, i) => (
             <Reveal key={title} delay={i * 0.06}>
               <div className="flex items-center gap-4 text-left">
@@ -327,11 +331,11 @@ function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-20 text-center">
+      <section className="mx-auto max-w-7xl px-4 py-12 text-center">
         <Reveal>
           <h2 className="text-3xl font-bold sm:text-4xl">Ready to build your everyday edit?</h2>
           <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-            Order now and pay cash on delivery, or pay in advance with EasyPaisa, JazzCash or bank
+            Order now and pay cash on delivery, or pay in advance with EasyPaisa, Raast or bank
             transfer.
           </p>
           <div className="mt-7 flex flex-wrap justify-center gap-3">

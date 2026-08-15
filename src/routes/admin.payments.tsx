@@ -87,7 +87,7 @@ function AdminPayments() {
         <div>
           <h1 className="text-2xl font-bold sm:text-3xl">Payment methods</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Add, edit or remove EasyPaisa, JazzCash, bank transfer and COD — including account
+            Add, edit or remove EasyPaisa, Raast, bank transfer and COD — including account
             numbers and screenshot verification.
           </p>
         </div>

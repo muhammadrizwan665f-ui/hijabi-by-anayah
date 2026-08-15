@@ -13,7 +13,11 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
   // discountPct is no longer needed since we show a single price or a specific sale price
   // const off = discountPct(product);
   const soldPct = Math.min(96, Math.round((product.sold / (product.sold + product.stock)) * 100));
-  const outOfStock = product.stock <= 0;
+  const colorList = (product.colors ?? []).filter((c) => c.images.length > 0 || c.name);
+  const hasColors = colorList.length > 0;
+  const allColorsOut =
+    hasColors && colorList.every((c) => typeof c.stock === "number" && c.stock <= 0);
+  const outOfStock = product.stock <= 0 || allColorsOut;
   const lowStock = product.stock > 0 && product.stock <= 5;
 
   return (
@@ -47,30 +51,30 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
         />
       </Link>
 
-      <div className="flex flex-1 flex-col gap-2 p-2 sm:gap-3 sm:p-4">
+      <div className="flex flex-1 flex-col gap-1 p-2 sm:gap-2 sm:p-3">
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <Star className="size-3.5 fill-warning text-warning" />
           <span className="font-semibold text-foreground">{product.rating}</span>
           <span>· {product.sold.toLocaleString()} sold</span>
         </div>
 
-        <Link to="/product/$slug" params={{ slug: product.slug }} className="min-h-11">
-          <h3 className="line-clamp-2 font-display text-xs font-semibold leading-snug hover:text-primary sm:text-base">
+        <Link to="/product/$slug" params={{ slug: product.slug }}>
+          <h3 className="line-clamp-2 font-display text-[11px] font-semibold leading-tight hover:text-primary sm:text-sm">
             {product.name}
           </h3>
         </Link>
 
-        <div className="flex flex-wrap items-baseline gap-2">
-          <span className="font-display text-base font-bold text-primary sm:text-xl">
+        <div className="flex items-baseline">
+          <span className="font-display text-base font-bold text-primary sm:text-lg">
             {formatPKR(unitPrice(product))}
           </span>
         </div>
 
         <div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
+          <div className="h-1 overflow-hidden rounded-full bg-secondary">
             <div className="gradient-brand h-full rounded-full" style={{ width: `${soldPct}%` }} />
           </div>
-          <p className="mt-1.5 text-xs text-muted-foreground">
+          <p className="mt-1 text-[10px] text-muted-foreground">
             {outOfStock ? (
               <span className="font-semibold text-destructive">Out of Stock</span>
             ) : lowStock ? (
@@ -91,18 +95,26 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
           </div>
         ) : null}
 
-        <div className="mt-auto flex flex-col gap-1.5 pt-1 sm:flex-row sm:gap-2">
-          <Button
-            className="h-8 flex-1 text-xs sm:h-10 sm:text-sm"
-            disabled={outOfStock}
-            onClick={() => {
-              if (outOfStock) return;
-              addToCart(product.id);
-              toast.success("Added to cart", { description: product.name });
-            }}
-          >
-            {outOfStock ? "Out of Stock" : "Add to Cart"}
-          </Button>
+        <div className="mt-1 flex flex-col gap-1 sm:flex-row sm:gap-2">
+          {hasColors && !outOfStock ? (
+            <Button className="h-8 flex-1 text-xs sm:h-10 sm:text-sm" asChild>
+              <Link to="/product/$slug" params={{ slug: product.slug }}>
+                Choose Colour
+              </Link>
+            </Button>
+          ) : (
+            <Button
+              className="h-8 flex-1 text-xs sm:h-10 sm:text-sm"
+              disabled={outOfStock}
+              onClick={() => {
+                if (outOfStock) return;
+                addToCart(product.id);
+                toast.success("Added to cart", { description: product.name });
+              }}
+            >
+              {outOfStock ? "Out of Stock" : "Add to Cart"}
+            </Button>
+          )}
           <Button variant="secondary" className="h-8 text-xs sm:h-10 sm:text-sm" asChild>
             <Link to="/product/$slug" params={{ slug: product.slug }}>
               View

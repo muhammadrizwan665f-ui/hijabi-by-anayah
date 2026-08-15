@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
+  ChevronRight,
   ChevronUp,
   Menu,
   Search,
@@ -21,12 +22,11 @@ const NAV = [
   { to: "/", label: "HOME" },
   { to: "/shop", label: "ABAYAH", search: { category: "Abayah" } },
   { to: "/shop", label: "NAMAZ CHADAR", search: { category: "Namaz Chadar" } },
-  { to: "/shop", label: "HIJAB INNER/CAPS", search: { category: "Hijab Inner/caps" } },
+  { to: "/shop", label: "HIJAB CAPS", search: { category: "Hijab Inner/caps" } },
   { to: "/shop", label: "ACCESSORIES", search: { category: "Accessories" } },
-  { to: "/shop", label: "BASIC/ PLAIN HIJABS", search: { category: "Basic/ Plain Hijabs" } },
+  { to: "/shop", label: "BASIC HIJAB", search: { category: "Basic/ Plain Hijabs" } },
   { to: "/shop", label: "NEW ARRIVAL" },
   { to: "/deals", label: "SALE" },
-  { to: "/about", label: "OUR STORY" },
 ] as any[];
 
 export function Header() {
@@ -55,19 +55,43 @@ export function Header() {
   }, [banners.length]);
 
   const dynamicNav = useMemo(() => {
-    const base = [
+    // Define the desired priority sequence
+    const priority = ["ABAYAH", "HIJAB", "CHADAR", "HIJAB CAPS", "ACCESSORIES"];
+    
+    const categories = (settings.categories || []).map((c) => ({
+      to: "/shop" as const,
+      label: c.name.toUpperCase(),
+      search: { category: c.name },
+    }));
+
+    // Sort categories based on priority, keeping others at the end
+    const sortedCategories = [...categories].sort((a, b) => {
+      const indexA = priority.indexOf(a.label);
+      const indexB = priority.indexOf(b.label);
+      
+      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+      if (indexA !== -1) return -1;
+      if (indexB !== -1) return 1;
+      return 0;
+    });
+
+    return [
       { to: "/", label: "HOME" },
-      ...(settings.categories || [])
-        .slice(0, 6)
-        .map((c) => ({ to: "/shop", label: c.name.toUpperCase(), search: { category: c.name } })),
+      ...sortedCategories,
       { to: "/shop", label: "NEW ARRIVAL" },
       { to: "/deals", label: "SALE" },
-      { to: "/about", label: "OUR STORY" },
     ];
-    // Fallback to static nav if no categories are managed yet
-    if (base.length <= 4) return NAV;
-    return base;
   }, [settings.categories]);
+
+
+  const mobileGroups = useMemo(() => {
+    const extraLabels = ["NEW ARRIVAL", "SALE", "OUR STORY"];
+    const nav = dynamicNav as any[];
+    return {
+      categories: nav.filter((n: any) => !extraLabels.includes(n.label)),
+      extras: nav.filter((n: any) => extraLabels.includes(n.label)),
+    };
+  }, [dynamicNav]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -109,7 +133,7 @@ export function Header() {
       <header
         className={cn(
           "sticky top-0 z-50 transition-all duration-300",
-          scrolled ? "glass shadow-soft" : "bg-background/70 backdrop-blur-md",
+          scrolled ? "glass shadow-soft" : "bg-background/90 backdrop-blur-md border-b border-primary/5",
         )}
       >
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3">
@@ -119,19 +143,119 @@ export function Header() {
                 <Menu />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-80">
-              <div className="mt-8 flex flex-col gap-1">
-                {dynamicNav.map((n) => (
-                  <Link
-                    key={n.to}
-                    to={n.to}
-                    search={n.search}
-                    onClick={() => setOpen(false)}
-                    className="rounded-xl px-4 py-3 text-base font-medium hover:bg-secondary"
+            <SheetContent
+              side="left"
+              className="flex w-[85vw] max-w-sm flex-col gap-0 border-primary/10 bg-surface p-0"
+            >
+              {/* Brand header */}
+              <div className="shrink-0 px-6 pb-4 pt-8">
+                <Link to="/" onClick={() => setOpen(false)} className="inline-block">
+                  <img src="/favicon.png" alt="Hijabi By Anayah logo" className="h-12 w-12 rounded-full object-cover" />
+                </Link>
+                <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.3em] text-primary/60">
+                  Modesty, Elevated
+                </p>
+                <div className="mt-6 h-px w-full bg-gradient-to-r from-primary/30 via-primary/10 to-transparent" />
+              </div>
+
+              {/* Nav */}
+              <div className="flex-1 overflow-y-auto px-4 pb-8 pt-2 no-scrollbar">
+                <div className="mb-6 space-y-1">
+                  <p className="px-3 pb-2 text-[10px] font-black uppercase tracking-[0.2em] text-primary/40">
+                    Collections
+                  </p>
+                  <div className="grid gap-1">
+                    {mobileGroups.categories.map((n, i) => (
+                      <motion.div
+                        key={`${n.to}-${n.label}`}
+                        initial={{ opacity: 0, x: -15 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.1 + i * 0.04, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                      >
+                        <Link
+                          to={n.to}
+                          search={n.search || true}
+                          onClick={() => setOpen(false)}
+                          className={cn(
+                            "group flex items-center justify-between rounded-2xl px-4 py-3.5 transition-all duration-300",
+                            "hover:bg-primary/5 active:scale-[0.98]",
+                            pathname === n.to
+                              ? "bg-primary/10 text-primary shadow-sm"
+                              : "text-foreground/80"
+                          )}
+                        >
+                          <span className="text-[14px] font-bold uppercase tracking-[0.15em]">{n.label}</span>
+                          <ChevronRight className="size-4 text-primary/20 transition-all duration-300 group-hover:translate-x-1 group-hover:text-primary/50" />
+                        </Link>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="px-3 pb-2 text-[10px] font-black uppercase tracking-[0.2em] text-primary/40">
+                    Discover
+                  </p>
+                  <div className="grid gap-1">
+                    {mobileGroups.extras.map((n, i) => (
+                      <motion.div
+                        key={`${n.to}-${n.label}`}
+                        initial={{ opacity: 0, x: -15 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{
+                          delay: 0.1 + (mobileGroups.categories.length + i) * 0.04,
+                          duration: 0.4,
+                          ease: [0.22, 1, 0.36, 1],
+                        }}
+                      >
+                        <Link
+                          to={n.to}
+                          search={n.search || true}
+                          onClick={() => setOpen(false)}
+                          className={cn(
+                            "group flex items-center justify-between rounded-2xl px-4 py-3.5 transition-all duration-300",
+                            "hover:bg-primary/5 active:scale-[0.98]",
+                            n.label === "SALE" ? "text-destructive" : "text-foreground/80",
+                            pathname === n.to && "bg-primary/10 text-primary shadow-sm"
+                          )}
+                        >
+                          <span className="flex items-center gap-3 text-[14px] font-bold uppercase tracking-[0.15em]">
+                            {n.label}
+                            {n.label === "SALE" && (
+                              <span className="relative flex size-2">
+                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-75"></span>
+                                <span className="relative inline-flex size-2 rounded-full bg-destructive"></span>
+                              </span>
+                            )}
+                          </span>
+                          <ChevronRight className="size-4 text-primary/20 transition-all duration-300 group-hover:translate-x-1 group-hover:text-primary/50" />
+                        </Link>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="shrink-0 space-y-4 border-t border-primary/10 bg-secondary/30 px-6 py-6">
+                <div className="space-y-3">
+                  <a
+                    href={`https://wa.me/${settings.whatsapp}?text=${encodeURIComponent("Assalam o Alaikum! I want to order from Hijabi By Anayah.")}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex w-full items-center justify-center gap-3 rounded-2xl bg-success px-5 py-4 text-[13px] font-black uppercase tracking-widest text-background shadow-lg shadow-success/20 transition-all active:scale-95"
                   >
-                    {n.label}
-                  </Link>
-                ))}
+                    <svg viewBox="0 0 24 24" className="size-5 fill-current" aria-hidden>
+                      <path d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.95 1.16-.17.2-.35.22-.65.07-.3-.15-1.12-.41-2.13-1.31-.79-.7-1.32-1.57-1.47-1.87-.15-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.62-1.51-.85-2.06-.22-.54-.45-.47-.62-.48h-.53c-.18 0-.47.07-.72.34-.25.27-.94.92-.94 2.25 0 1.32.96 2.6 1.09 2.78.13.17 1.85 2.96 4.5 4.03 2.65 1.07 2.65.71 3.13.67.47-.05 1.53-.62 1.75-1.23.22-.6.22-1.12.15-1.23-.07-.1-.27-.17-.57-.32zM12 2a10 10 0 0 0-8.6 15.1L2 22l5.05-1.32A10 10 0 1 0 12 2z" />
+                    </svg>
+                    WhatsApp Order
+                  </a>
+                </div>
+                
+                <div className="flex flex-col items-center gap-1.5">
+                  <p className="text-[11px] font-bold text-primary/60">{settings.email}</p>
+                  <p className="text-[10px] font-medium tracking-wide text-muted-foreground/60">© 2021 Hijabi By Anayah</p>
+                </div>
               </div>
             </SheetContent>
           </Sheet>
@@ -145,15 +269,19 @@ export function Header() {
             <span className="hidden font-display text-lg font-bold tracking-tight sm:inline">Hijabi By Anayah</span>
           </Link>
 
-          <nav className="ml-6 hidden items-center gap-1 lg:flex">
+          <nav className="ml-8 hidden items-center gap-1 lg:flex xl:gap-2">
             {dynamicNav.map((n) => (
               <Link
-                key={n.to}
+                key={`${n.to}-${n.label}`}
                 to={n.to}
-                search={n.search}
+                search={(n as any).search || true}
+
                 className={cn(
-                  "rounded-full px-3.5 py-2 text-sm font-medium transition-colors hover:bg-secondary",
-                  pathname === n.to && "bg-secondary text-primary",
+                  "rounded-full px-2.5 py-1.5 text-[11px] font-black uppercase tracking-[0.1em] transition-all duration-300 xl:px-3 xl:text-[11.5px]",
+                  "hover:bg-primary/5 hover:text-primary active:scale-95",
+                  pathname === n.to
+                    ? "bg-primary/10 text-primary"
+                    : "text-foreground/70",
                 )}
               >
                 {n.label}

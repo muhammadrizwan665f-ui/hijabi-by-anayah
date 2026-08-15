@@ -1,0 +1,1 @@
+UPDATE public.products SET warranty = 'Hand-checked premium quality' WHERE warranty ILIKE '%3-day%' OR warranty ILIKE '%exchange%' OR warranty ILIKE '%replacement%';

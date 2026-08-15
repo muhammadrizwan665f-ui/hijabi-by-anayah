@@ -54,7 +54,7 @@ type SortKey = "featured" | "best" | "rating" | "low" | "high" | "new";
 
 function Shop() {
   const search = Route.useSearch();
-  const { products } = useStore();
+  const { products, settings } = useStore();
   const [q, setQ] = useState(search.q ?? "");
   const [cats, setCats] = useState<string[]>(search.category ? [search.category] : []);
   const [maxPrice, setMaxPrice] = useState(15000);
@@ -92,7 +92,7 @@ function Shop() {
       <div>
         <h3 className="font-display text-sm font-bold uppercase tracking-widest">Category</h3>
         <div className="mt-3 space-y-2.5">
-          {CATEGORIES.map((c) => (
+          {(settings.categories || []).map((c) => (
             <div key={c.id} className="flex items-center gap-2">
               <Checkbox
                 id={`cat-${c.id}`}
@@ -106,6 +106,7 @@ function Shop() {
               </Label>
             </div>
           ))}
+
         </div>
       </div>
 
@@ -153,7 +154,7 @@ function Shop() {
   );
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-12">
+    <div className="mx-auto max-w-7xl px-4 py-6">
       <Reveal>
         <h1 className="text-3xl font-bold sm:text-4xl">All Products</h1>
         <p className="mt-2 text-muted-foreground">
@@ -184,7 +185,7 @@ function Shop() {
         </Select>
       </div>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[260px_1fr]">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[260px_1fr]">
         <aside className="premium-card h-fit p-6 max-lg:hidden">
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="size-4 text-primary" />

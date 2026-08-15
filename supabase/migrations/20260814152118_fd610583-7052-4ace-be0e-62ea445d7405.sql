@@ -1,0 +1,1 @@
+UPDATE public.payment_methods SET label = REPLACE(label, 'JazzCash', 'Raast'), instructions = REPLACE(instructions, 'JazzCash', 'Raast') WHERE label ILIKE '%JazzCash%' OR instructions ILIKE '%JazzCash%';
