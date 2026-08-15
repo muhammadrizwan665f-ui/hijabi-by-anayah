@@ -20,11 +20,11 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { to: "/", label: "HOME" },
+  { to: "/shop", label: "HIJAB", search: { q: "hijab" } },
   { to: "/shop", label: "ABAYAH", search: { category: "Abayah" } },
-  { to: "/shop", label: "NAMAZ CHADAR", search: { category: "Namaz Chadar" } },
-  { to: "/shop", label: "HIJAB CAPS", search: { category: "Hijab Inner/caps" } },
+  { to: "/shop", label: "STOLES", search: { q: "stole" } },
+  { to: "/shop", label: "CHADAREN", search: { q: "chadar" } },
   { to: "/shop", label: "ACCESSORIES", search: { category: "Accessories" } },
-  { to: "/shop", label: "BASIC HIJAB", search: { category: "Basic/ Plain Hijabs" } },
   { to: "/shop", label: "NEW ARRIVAL" },
   { to: "/deals", label: "SALE" },
 ] as any[];
@@ -54,34 +54,7 @@ export function Header() {
     return () => clearInterval(timer);
   }, [banners.length]);
 
-  const dynamicNav = useMemo(() => {
-    // Define the desired priority sequence
-    const priority = ["ABAYAH", "HIJAB", "CHADAR", "HIJAB CAPS", "ACCESSORIES"];
-    
-    const categories = (settings.categories || []).map((c) => ({
-      to: "/shop" as const,
-      label: c.name.toUpperCase(),
-      search: { category: c.name },
-    }));
-
-    // Sort categories based on priority, keeping others at the end
-    const sortedCategories = [...categories].sort((a, b) => {
-      const indexA = priority.indexOf(a.label);
-      const indexB = priority.indexOf(b.label);
-      
-      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-      if (indexA !== -1) return -1;
-      if (indexB !== -1) return 1;
-      return 0;
-    });
-
-    return [
-      { to: "/", label: "HOME" },
-      ...sortedCategories,
-      { to: "/shop", label: "NEW ARRIVAL" },
-      { to: "/deals", label: "SALE" },
-    ];
-  }, [settings.categories]);
+  const dynamicNav = useMemo(() => NAV, []);
 
 
   const mobileGroups = useMemo(() => {
