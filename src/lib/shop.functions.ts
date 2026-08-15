@@ -105,7 +105,7 @@ export const createOrder = createServerFn({ method: "POST" })
           "id",
           data.lines.map((l) => l.productId),
         ),
-      pub.from("payment_methods").select("*").eq("code", data.paymentCode).eq("enabled", true).maybeSingle(),
+      pub.from("payment_methods").select(PUBLIC_PAYMENT_COLUMNS).eq("code", data.paymentCode).eq("enabled", true).maybeSingle(),
       pub.from("site_settings").select("data").maybeSingle(),
     ]);
 
