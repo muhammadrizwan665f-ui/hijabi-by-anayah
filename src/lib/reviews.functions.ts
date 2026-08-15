@@ -91,45 +91,17 @@ export const submitReviewFn = createServerFn({ method: "POST" })
       .parse(input)
   )
   .handler(async ({ data }) => {
-    const { getAdminClient } = await import("./db.server");
-    const admin = await getAdminClient();
+    const { getPublicClient } = await import("./db.server");
+    const supabase = getPublicClient();
 
-    // 1. Fetch current product
-    const { data: row, error: fetchError } = await admin
-      .from("products")
-      .select("*")
-      .eq("id", data.productId)
-      .single();
+    const { data: newReview, error } = await supabase.rpc("submit_product_review", {
+      _product_id: data.productId,
+      _review: data.review,
+    });
 
-    if (fetchError || !row) {
-      throw new Error("Product not found");
+    if (error) {
+      throw new Error(error.message || "Could not submit your review.");
     }
 
-    const product = rowToProduct(row as Record<string, unknown>);
-    
-    // 2. Append new review
-    const newReview = {
-      ...data.review,
-      id: crypto.randomUUID(),
-      date: new Date().toISOString(),
-      verified: false,
-      helpful: 0,
-    };
-
-    const updatedProduct = {
-      ...product,
-      reviews: [newReview, ...product.reviews],
-    };
-
-    // 3. Save back
-    const { error: saveError } = await admin
-      .from("products")
-      .update(productToRow(updatedProduct) as never)
-      .eq("id", data.productId);
-
-    if (saveError) {
-      throw new Error(saveError.message);
-    }
-
-    return { ok: true, reviewId: newReview.id };
+    return { ok: true, reviewId: (newReview as { id: string } | null)?.id };
   });

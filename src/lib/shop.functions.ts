@@ -62,20 +62,18 @@ export const getPaymentAccount = createServerFn({ method: "GET" })
     z.object({ code: z.string().trim().min(2).max(40) }).parse(input),
   )
   .handler(async ({ data }) => {
-    const { getAdminClient } = await import("./db.server");
-    const admin = await getAdminClient();
-    const { data: row } = await admin
-      .from("payment_methods")
-      .select("code,account_title,account_number,iban")
-      .eq("code", data.code)
-      .eq("enabled", true)
+    const { getPublicClient } = await import("./db.server");
+    const supabase = getPublicClient();
+    const { data: row } = await supabase
+      .rpc("get_payment_account" as never, { _code: data.code })
       .maybeSingle();
     if (!row) return null;
+    const r = row as { code: string; account_title: string | null; account_number: string | null; iban: string | null };
     return {
-      code: row.code as string,
-      accountTitle: (row.account_title as string | null) ?? undefined,
-      accountNumber: (row.account_number as string | null) ?? undefined,
-      iban: (row.iban as string | null) ?? undefined,
+      code: r.code,
+      accountTitle: r.account_title ?? undefined,
+      accountNumber: r.account_number ?? undefined,
+      iban: r.iban ?? undefined,
     };
   });
 
@@ -85,12 +83,10 @@ export const getOrderByNumber = createServerFn({ method: "GET" })
     z.object({ orderNo: z.string().trim().min(3).max(30) }).parse(input),
   )
   .handler(async ({ data }) => {
-    const { getAdminClient } = await import("./db.server");
-    const supabase = await getAdminClient();
+    const { getPublicClient } = await import("./db.server");
+    const supabase = getPublicClient();
     const { data: row } = await supabase
-      .from("orders")
-      .select("*")
-      .eq("order_no", data.orderNo.toUpperCase())
+      .rpc("get_order_by_number", { _order_no: data.orderNo })
       .maybeSingle();
     return row ? rowToOrder(row as Record<string, unknown>) : null;
   });
@@ -98,9 +94,8 @@ export const getOrderByNumber = createServerFn({ method: "GET" })
 export const createOrder = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => cartSchema.parse(input))
   .handler(async ({ data }) => {
-    const { getAdminClient, getPublicClient, newOrderNo } = await import("./db.server");
+    const { getPublicClient, newOrderNo } = await import("./db.server");
     const pub = getPublicClient();
-    const adminDb = await getAdminClient();
 
     const [{ data: productRows }, { data: methodRow }, { data: settingsRow }] = await Promise.all([
       pub
@@ -110,8 +105,8 @@ export const createOrder = createServerFn({ method: "POST" })
           "id",
           data.lines.map((l) => l.productId),
         ),
-      adminDb.from("payment_methods").select("*").eq("code", data.paymentCode).eq("enabled", true).maybeSingle(),
-      adminDb.from("site_settings").select("data").maybeSingle(),
+      pub.from("payment_methods").select("*").eq("code", data.paymentCode).eq("enabled", true).maybeSingle(),
+      pub.from("site_settings").select("data").maybeSingle(),
     ]);
 
 
@@ -149,7 +144,6 @@ export const createOrder = createServerFn({ method: "POST" })
     });
 
     const orderNo = newOrderNo();
-    const admin = await getAdminClient();
 
     let screenshotPath: string | null = null;
     if (method.requiresProof && data.screenshot) {
@@ -162,7 +156,7 @@ export const createOrder = createServerFn({ method: "POST" })
         if (bytes.byteLength <= 5_000_000) {
           const ext = contentType === "application/pdf" ? "pdf" : contentType.split("/")[1];
           const path = `${orderNo}/proof.${ext}`;
-          const { error } = await admin.storage
+          const { error } = await pub.storage
             .from("payment-proofs")
             .upload(path, bytes, { contentType, upsert: true });
           if (!error) screenshotPath = path;
@@ -186,7 +180,7 @@ export const createOrder = createServerFn({ method: "POST" })
 
     // Atomic reservation: locks each product row, validates availability, then
     // decrements stock and increments sold. Blocks overselling under races.
-    const { error: stockError } = await admin.rpc("reserve_stock", { _lines: stockLines });
+    const { error: stockError } = await pub.rpc("reserve_stock", { _lines: stockLines });
     if (stockError) {
       const msg = (stockError.message || "").trim();
       const isStockMessage = /out of stock|left in stock|no longer available/i.test(msg);
@@ -197,7 +191,7 @@ export const createOrder = createServerFn({ method: "POST" })
       );
     }
 
-    const { data: inserted, error } = await admin
+    const { data: inserted, error } = await pub
       .from("orders")
       .insert({
         order_no: orderNo,
@@ -233,13 +227,13 @@ export const createOrder = createServerFn({ method: "POST" })
 
     if (error) {
       // Order failed to save — give the reserved stock back so nothing is stuck.
-      await admin.rpc("release_stock", { _lines: stockLines });
+      await pub.rpc("release_stock", { _lines: stockLines });
       throw new Error("We could not save your order. Please try again.");
     }
 
     // New Order Notification for Admin
     const notifMessage = `A new order ${orderNo} has been placed by ${data.customer.fullName}.`;
-    await admin.from("notifications").insert({
+    await pub.from("notifications").insert({
       order_no: orderNo,
       title: "New Order Received",
       message: notifMessage,
@@ -248,8 +242,9 @@ export const createOrder = createServerFn({ method: "POST" })
     });
 
     // Push notification to every registered admin device (works when the site is closed).
+    // Best-effort only — silently does nothing if push subscriptions aren't readable.
     const { broadcastAdminPush } = await import("./push-broadcast.server");
-    await broadcastAdminPush(admin as never, {
+    await broadcastAdminPush(pub as never, {
       title: "🛍️ New Order Received",
       message: notifMessage,
       url: "/admin/orders",
@@ -274,9 +269,9 @@ export const trackVisit = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data }) => {
-    const { getAdminClient } = await import("./db.server");
+    const { getPublicClient } = await import("./db.server");
     const { getRequestHeader } = await import("@tanstack/react-start/server");
-    const admin = await getAdminClient();
+    const admin = getPublicClient();
     await admin.from("visits").insert({
       session_id: data.sessionId,
       path: data.path || "/",
