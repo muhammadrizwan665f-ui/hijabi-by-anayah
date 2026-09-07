@@ -69,16 +69,16 @@ export function computeTotals(opts: {
   const isKarachi = opts.city?.toLowerCase().trim() === "karachi";
 
   if (isKarachi) {
-    rate = isUrgent 
-      ? (opts.settings.shippingKarachiUrgent || 450) 
+    rate = isUrgent
+      ? (opts.settings.shippingKarachiUrgent || 450)
       : 300; // Standard Karachi only 300
   } else {
-    // For non-Karachi, if urgent is selected it's always 450
-    if (isUrgent) {
-      rate = 450;
-    } else if (opts.province && opts.settings.provinceRates && opts.settings.provinceRates[opts.province]) {
-      rate = opts.settings.provinceRates[opts.province] ?? opts.settings.shippingFlat ?? 350;
-    }
+    // Non-Karachi: the delivery option the customer picks IS the price —
+    // Standard is always the flat rate (350 DC as shown at checkout),
+    // Urgent/Leopard is always 450, regardless of province. Per-province
+    // custom rates used to silently override this, so the amount charged
+    // didn't match what was shown next to the selected option.
+    rate = isUrgent ? 450 : (opts.settings.shippingFlat ?? 350);
   }
 
   const shipping = goods === 0 ? 0 : rate;
