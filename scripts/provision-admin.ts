@@ -2,8 +2,9 @@
 import { createSupabaseAdminClient } from './integrations/supabase/client.server';
 
 async function run() {
-  const email = process.env.ADMIN_EMAIL || 'hijabibyanayah@gmail.com';
-  const password = process.env.ADMIN_PASSWORD || 'hijab:anayah:by//@hijani11001x0nsTvy';
+  const email = process.env.ADMIN_EMAIL;
+  const password = process.env.ADMIN_PASSWORD;
+  if (!email || !password) { console.error('Set ADMIN_EMAIL and ADMIN_PASSWORD env vars'); process.exit(1); }
   
   console.log(`Provisioning admin: ${email}`);
   
