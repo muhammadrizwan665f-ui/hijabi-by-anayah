@@ -58,7 +58,18 @@ export function usePushNotifications() {
       }
       const reg = await navigator.serviceWorker.register("/sw.js");
       await navigator.serviceWorker.ready;
-      const existing = await reg.pushManager.getSubscription();
+      let existing = await reg.pushManager.getSubscription();
+      if (existing) {
+        // A subscription made with a different (old) VAPID key can never receive our pushes.
+        const want = urlBase64ToUint8Array(key);
+        const curBuf = existing.options?.applicationServerKey;
+        const cur = curBuf ? new Uint8Array(curBuf) : null;
+        const same = !!cur && cur.length === want.length && cur.every((b, i) => b === want[i]);
+        if (!same) {
+          await existing.unsubscribe();
+          existing = null;
+        }
+      }
       const sub =
         existing ??
         (await reg.pushManager.subscribe({
