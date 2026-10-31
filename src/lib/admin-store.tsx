@@ -25,6 +25,7 @@ interface AdminApi extends AdminData {
   session: Session | null;
   email: string | null;
   isAdmin: boolean;
+  adminError: string | null;
   checking: boolean;
   loadingData: boolean;
   reload: () => Promise<void>;
@@ -44,6 +45,7 @@ const AdminContext = createContext<AdminApi | null>(null);
 export function AdminProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [adminError, setAdminError] = useState<string | null>(null);
   const [checking, setChecking] = useState(true);
   const [loadingData, setLoadingData] = useState(false);
   const [data, setData] = useState<AdminData>(emptyData);
@@ -54,8 +56,10 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       const next = await getAdminBootstrap();
       setData(next);
       setIsAdmin(true);
-    } catch {
+      setAdminError(null);
+    } catch (err) {
       setIsAdmin(false);
+      setAdminError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoadingData(false);
     }
@@ -123,12 +127,13 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       session,
       email: session?.user.email ?? null,
       isAdmin,
+      adminError,
       checking,
       loadingData,
       reload,
       signOut,
     }),
-    [data, session, isAdmin, checking, loadingData, reload, signOut],
+    [data, session, isAdmin, adminError, checking, loadingData, reload, signOut],
   );
 
   return <AdminContext.Provider value={api}>{children}</AdminContext.Provider>;
