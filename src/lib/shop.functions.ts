@@ -191,7 +191,8 @@ export const createOrder = createServerFn({ method: "POST" })
       );
     }
 
-    const { data: inserted, error } = await pub
+    // Insert without RETURNING: the public (anon) key may insert orders but may not read them back.
+    const { error } = await pub
       .from("orders")
       .insert({
         order_no: orderNo,
@@ -221,9 +222,7 @@ export const createOrder = createServerFn({ method: "POST" })
         payment_screenshot_path: screenshotPath,
         timeline: [{ status, at: now }],
         urgent: totals.isUrgent ?? false,
-      })
-      .select("*")
-      .single();
+      });
 
     if (error) {
       // Order failed to save — give the reserved stock back so nothing is stuck.
@@ -251,7 +250,11 @@ export const createOrder = createServerFn({ method: "POST" })
     });
 
 
-    return rowToOrder(inserted as Record<string, unknown>);
+    // Read the saved order back through the narrow SECURITY DEFINER lookup.
+    const { data: saved } = await pub.rpc("get_order_by_number", { _order_no: orderNo }).maybeSingle();
+    if (!saved) throw new Error("We could not save your order. Please try again.");
+
+    return rowToOrder(saved as Record<string, unknown>);
   });
 
 export const trackVisit = createServerFn({ method: "POST" })
