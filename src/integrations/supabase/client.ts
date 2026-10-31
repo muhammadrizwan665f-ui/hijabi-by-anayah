@@ -27,8 +27,8 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
 }
 
 
-const FALLBACK_SUPABASE_URL = 'https://pjizhchzpsqezcqrkedc.supabase.co';
-const FALLBACK_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_q0rulG8Mjs8-sQMB0Pxrhw_HLxqfg_v';
+const FALLBACK_SUPABASE_URL = 'https://finobtknhqpzvinlfcsj.supabase.co';
+const FALLBACK_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_i6Uro7O3XbCVPUodA1KWlQ__inMqrr9';
 
 function createSupabaseClient() {
   // Use import.meta.env for client-side (Vite build-time replacement)
