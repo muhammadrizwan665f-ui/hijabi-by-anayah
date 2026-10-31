@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function AdminLogin({ denied = false }: { denied?: boolean }) {
-  const { signOut, email: signedInEmail } = useAdmin();
+  const { signOut, email: signedInEmail, adminError } = useAdmin();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -41,6 +41,11 @@ export default function AdminLogin({ denied = false }: { denied?: boolean }) {
           <p className="mt-2 text-sm text-muted-foreground">
             {signedInEmail} does not have store-owner access. Sign in with the Hijabi By Anayah admin email.
           </p>
+          {adminError ? (
+            <p className="mt-3 break-words rounded-md bg-muted p-2 text-left text-xs text-muted-foreground">
+              Technical reason: {adminError}
+            </p>
+          ) : null}
           <Button className="mt-6 w-full" onClick={() => void signOut()}>
             Sign out and try again
           </Button>
