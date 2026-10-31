@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useAdmin } from "@/lib/admin-store";
+import { AccountSettings } from "@/components/admin/account-settings";
 import { useStore } from "@/lib/store";
 import { saveSettings, uploadProductImage } from "@/lib/admin.functions";
 import { FONTS, THEMES } from "@/lib/theme";
@@ -73,6 +74,8 @@ function AdminSettings() {
           Save changes
         </Button>
       </div>
+
+      <AccountSettings />
 
       <section className="premium-card mt-6 p-6">
         <div className="flex items-center gap-2">
