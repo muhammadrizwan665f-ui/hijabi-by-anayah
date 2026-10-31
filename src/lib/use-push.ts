@@ -116,8 +116,16 @@ export function usePushNotifications() {
   const test = useCallback(async () => {
     setBusy(true);
     try {
-      await sendTestPush();
-      toast.success("Test alert sent to your devices");
+      const r = await sendTestPush();
+      if (r.devices === 0) {
+        toast.error("No device is registered for alerts. Turn alerts off and on again.", {
+          description: r.details.join("; ") || undefined,
+        });
+      } else if (r.sent === 0) {
+        toast.error("Alert could not be delivered", { description: r.details.join("; ") || undefined });
+      } else {
+        toast.success(`Test alert sent to ${r.sent} of ${r.devices} device(s)`);
+      }
     } catch {
       toast.error("Could not send test alert.");
     } finally {

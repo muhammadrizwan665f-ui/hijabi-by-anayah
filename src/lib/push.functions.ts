@@ -54,10 +54,10 @@ export const sendTestPush = createServerFn({ method: "POST" })
     await assertAdminRole(context as never);
     const { broadcastAdminPush } = await import("./push-broadcast.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await broadcastAdminPush(supabaseAdmin as never, {
+    const report = await broadcastAdminPush(supabaseAdmin as never, {
       title: "Test notification",
       message: "Push notifications are working on this device.",
       url: "/admin/orders",
     });
-    return { ok: true };
+    return { ok: true, ...report };
   });

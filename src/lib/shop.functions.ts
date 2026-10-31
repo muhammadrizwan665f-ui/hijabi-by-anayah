@@ -243,7 +243,18 @@ export const createOrder = createServerFn({ method: "POST" })
     // Push notification to every registered admin device (works when the site is closed).
     // Best-effort only — silently does nothing if push subscriptions aren't readable.
     const { broadcastAdminPush } = await import("./push-broadcast.server");
-    await broadcastAdminPush(pub as never, {
+    // The public (anon) key cannot read push_subscriptions, so use the service-role client
+    // for this one lookup. If the secret is not configured, fall back (push is then skipped).
+    let pushClient: unknown = pub;
+    try {
+      const { getAdminClient } = await import("./db.server");
+      const adminClient = await getAdminClient();
+      void (adminClient as { from: unknown }).from;
+      pushClient = adminClient;
+    } catch {
+      /* no service-role key available */
+    }
+    await broadcastAdminPush(pushClient as never, {
       title: "🛍️ New Order Received",
       message: notifMessage,
       url: "/admin/orders",
