@@ -1,4 +1,3 @@
-
 import { createServerFn } from "@tanstack/react-start";
 import { requireAdminAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
@@ -34,10 +33,6 @@ const PAYMENT_STATUSES = [
   "Verified",
   "Rejected",
 ] as const;
-
-const dbError = (message: string): never => {
-  throw new Error(message);
-};
 
 export const getAdminBootstrap = createServerFn({ method: "GET" })
   .middleware([requireAdminAuth])
