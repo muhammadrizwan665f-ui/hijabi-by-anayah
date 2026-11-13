@@ -449,7 +449,9 @@ export const createOrder = createServerFn({
       saveNotification,
     ]);
 
-    const savedChanges = Number(results[1]?.meta?.changes ?? 0);
+   const savedChanges = Number(
+  (results[1] as { meta?: { changes?: number } } | undefined)?.meta?.changes ?? 0,
+);
 
     if (savedChanges !== 1) {
       if (screenshotPath) {
