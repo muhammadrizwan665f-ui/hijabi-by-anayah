@@ -1,107 +1,149 @@
-import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { z } from "zod";
-import { productToRow, rowToProduct } from "./mappers";
 
+import { createServerFn } from "@tanstack/react-start";
+import { requireAdminAuth } from "@/integrations/supabase/auth-middleware";
+import { z } from "zod";
+import { getDB } from "./cloudflare-db.server";
+import { rowToProduct } from "./mappers";
+import type { Review } from "./types";
+
+const reviewSchema = z.object({
+  name: z.string().trim().min(2).max(50),
+  city: z.string().trim().min(2).max(50),
+  rating: z.number().int().min(1).max(5),
+  title: z.string().trim().min(2).max(100),
+  body: z.string().trim().min(10).max(1000),
+});
+
+async function getProduct(productId: string) {
+  const row = await getDB()
+    .prepare("SELECT * FROM products WHERE id = ?")
+    .bind(productId)
+    .first<Record<string, unknown>>();
+
+  if (!row) {
+    throw new Error("Product not found.");
+  }
+
+  return rowToProduct(row);
+}
+
+async function saveReviews(
+  productId: string,
+  reviews: Review[],
+) {
+  const rating =
+    reviews.length > 0
+      ? reviews.reduce((sum, review) => sum + review.rating, 0) /
+        reviews.length
+      : 5;
+
+  const result = await getDB()
+    .prepare(
+      `UPDATE products
+       SET reviews = ?,
+           rating = ?,
+           updated_at = ?
+       WHERE id = ?`,
+    )
+    .bind(
+      JSON.stringify(reviews),
+      rating,
+      new Date().toISOString(),
+      productId,
+    )
+    .run();
+
+  if (!result.meta?.changes) {
+    throw new Error("Could not save product reviews.");
+  }
+}
+
+/**
+ * Admin: generate reviews for a product.
+ */
 export const generateReviewsFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdminAuth])
   .inputValidator((input: unknown) =>
     z
       .object({
         productId: z.string().uuid(),
         count: z.number().int().min(1).max(50),
-        reviews: z.array(
-          z.object({
-            name: z.string().min(1),
-            city: z.string().min(1),
-            rating: z.number().min(1).max(5),
-            title: z.string().min(1),
-            body: z.string().min(1),
-            date: z.string(),
-            verified: z.boolean(),
-            helpful: z.number(),
-          })
-        ),
+        reviews: z
+          .array(
+            z.object({
+              name: z.string().trim().min(1).max(50),
+              city: z.string().trim().min(1).max(50),
+              rating: z.number().int().min(1).max(5),
+              title: z.string().trim().min(1).max(100),
+              body: z.string().trim().min(1).max(1000),
+              date: z.string(),
+              verified: z.boolean(),
+              helpful: z.number().int().min(0),
+            }),
+          )
+          .min(1)
+          .max(50),
       })
-      .parse(input)
+      .refine((value) => value.count === value.reviews.length, {
+        message: "Review count does not match the reviews provided.",
+      })
+      .parse(input),
   )
-  .handler(async ({ data, context }) => {
-    // 1. Check admin role
-    const { data: roleData, error: roleError } = await context.supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", context.userId)
-      .eq("role", "admin")
-      .maybeSingle();
+  .handler(async ({ data }) => {
+    const product = await getProduct(data.productId);
 
-    if (roleError || !roleData) {
-      throw new Error("Forbidden: admin access only.");
-    }
-
-    // 2. Fetch current product
-    const { data: row, error: fetchError } = await context.supabase
-      .from("products")
-      .select("*")
-      .eq("id", data.productId)
-      .single();
-
-    if (fetchError || !row) {
-      throw new Error("Product not found");
-    }
-
-    const product = rowToProduct(row as Record<string, unknown>);
-    
-    // 3. Append new reviews
-    const newReviews = data.reviews.map(r => ({
-      ...r,
+    const newReviews: Review[] = data.reviews.map((review) => ({
+      ...review,
       id: crypto.randomUUID(),
+      productId: data.productId,
     }));
 
-    const updatedProduct = {
-      ...product,
-      reviews: [...newReviews, ...product.reviews],
+    const updatedReviews = [
+      ...newReviews,
+      ...(product.reviews ?? []),
+    ];
+
+    await saveReviews(data.productId, updatedReviews);
+
+    return {
+      ok: true,
+      count: newReviews.length,
     };
-
-    // 4. Save back
-    const { error: saveError } = await context.supabase
-      .from("products")
-      .update(productToRow(updatedProduct) as never)
-      .eq("id", data.productId);
-
-    if (saveError) {
-      throw new Error(saveError.message);
-    }
-
-    return { ok: true, count: newReviews.length };
   });
 
+/**
+ * Customer: submit a product review.
+ */
 export const submitReviewFn = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z
       .object({
         productId: z.string().uuid(),
-        review: z.object({
-          name: z.string().trim().min(2).max(50),
-          city: z.string().trim().min(2).max(50),
-          rating: z.number().int().min(1).max(5),
-          title: z.string().trim().min(2).max(100),
-          body: z.string().trim().min(10).max(1000),
-        }),
+        review: reviewSchema,
       })
-      .parse(input)
+      .parse(input),
   )
   .handler(async ({ data }) => {
-    const { getPublicClient } = await import("./db.server");
-    const supabase = getPublicClient();
+    const product = await getProduct(data.productId);
 
-    const { data: newReview, error } = await supabase.rpc("submit_product_review", {
-      _product_id: data.productId,
-      _review: data.review,
-    });
+    const newReview: Review = {
+      ...data.review,
+      id: crypto.randomUUID(),
+      date: new Date().toISOString(),
+      verified: false,
+      helpful: 0,
+      productId: data.productId,
+    };
 
-    if (error) {
-      throw new Error(error.message || "Could not submit your review.");
-    }
+    const updatedReviews = [
+      newReview,
+      ...(product.reviews ?? []),
+    ];
 
-    return { ok: true, reviewId: (newReview as { id: string } | null)?.id };
+    await saveReviews(data.productId, updatedReviews);
+
+    return {
+      ok: true,
+      reviewId: newReview.id,
+    };
   });
