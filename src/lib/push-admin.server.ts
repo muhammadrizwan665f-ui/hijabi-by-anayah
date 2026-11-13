@@ -1,10 +1,10 @@
-
-import type { MiddlewareResult } from "@tanstack/react-start";
-import type { AdminAuthContext } from "@/integrations/supabase/auth-middleware";
+type AdminAuthContext = {
+  adminId: string;
+  email?: string;
+};
 
 /**
- * Admin authorization is handled by the D1-backed requireAdminAuth
- * middleware. This helper remains for compatibility with older imports.
+ * Checks the admin context supplied by D1-backed authentication middleware.
  */
 export async function assertAdminRole(
   context: AdminAuthContext,
