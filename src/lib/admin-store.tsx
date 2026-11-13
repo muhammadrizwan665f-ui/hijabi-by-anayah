@@ -1,3 +1,4 @@
+
 import {
   createContext,
   useCallback,
@@ -7,11 +8,19 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  getAdminSession,
+  logoutAdmin,
+} from "./auth.functions";
 import { getAdminBootstrap } from "./admin.functions";
-import { rowToNotification, toSettings } from "./mappers";
-import type { Notification, Order, PaymentMethod, Product, Settings } from "./types";
+import { toSettings } from "./mappers";
+import type {
+  Notification,
+  Order,
+  PaymentMethod,
+  Product,
+  Settings,
+} from "./types";
 
 interface AdminData {
   products: Product[];
@@ -21,8 +30,14 @@ interface AdminData {
   settings: Settings;
 }
 
+interface AdminSession {
+  user: {
+    email: string;
+  };
+}
+
 interface AdminApi extends AdminData {
-  session: Session | null;
+  session: AdminSession | null;
   email: string | null;
   isAdmin: boolean;
   adminError: string | null;
@@ -43,7 +58,7 @@ const emptyData: AdminData = {
 const AdminContext = createContext<AdminApi | null>(null);
 
 export function AdminProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<AdminSession | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminError, setAdminError] = useState<string | null>(null);
   const [checking, setChecking] = useState(true);
@@ -52,6 +67,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
   const reload = useCallback(async () => {
     setLoadingData(true);
+
     try {
       const next = await getAdminBootstrap();
       setData(next);
@@ -59,66 +75,69 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       setAdminError(null);
     } catch (err) {
       setIsAdmin(false);
-      setAdminError(err instanceof Error ? err.message : String(err));
+      setAdminError(
+        err instanceof Error ? err.message : String(err),
+      );
     } finally {
       setLoadingData(false);
     }
   }, []);
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
-      setSession(next);
-      if (event === "SIGNED_OUT") {
+    let mounted = true;
+
+    async function checkSession() {
+      try {
+        const current = await getAdminSession();
+
+        if (!mounted) return;
+
+        if (current) {
+          setSession({
+            user: {
+              email: current.email,
+            },
+          });
+        } else {
+          setSession(null);
+          setIsAdmin(false);
+          setData(emptyData);
+        }
+      } catch (err) {
+        if (!mounted) return;
+
+        setSession(null);
         setIsAdmin(false);
-        setData(emptyData);
+        setAdminError(
+          err instanceof Error ? err.message : String(err),
+        );
+      } finally {
+        if (mounted) setChecking(false);
       }
-    });
-    void (async () => {
-      const { data: got } = await supabase.auth.getSession();
-      setSession(got.session);
-      setChecking(false);
-    })();
-    return () => sub.subscription.unsubscribe();
+    }
+
+    void checkSession();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {
-    if (isAdmin) {
-      const sub = supabase
-        .channel("admin_notifications")
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "notifications" },
-          (payload) => {
-            const notif = rowToNotification(payload.new as any);
-            setData((prev) => ({
-              ...prev,
-              notifications: [notif, ...prev.notifications].slice(0, 50),
-            }));
-            // Show real-time toast
-            import("sonner").then(({ toast }) => {
-              toast.info(notif.title, {
-                description: notif.message,
-                duration: 5000,
-              });
-            });
-          },
-        )
-        .subscribe();
-      return () => {
-        void supabase.removeChannel(sub);
-      };
+    if (session) {
+      void reload();
     }
-    return undefined;
-  }, [isAdmin]);
-
-  useEffect(() => {
-    if (session) void reload();
   }, [session, reload]);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
-    setIsAdmin(false);
-    setData(emptyData);
+    try {
+      await logoutAdmin();
+    } finally {
+      setSession(null);
+      setIsAdmin(false);
+      setAdminError(null);
+      setData(emptyData);
+    }
   }, []);
 
   const api = useMemo<AdminApi>(
@@ -133,14 +152,31 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       reload,
       signOut,
     }),
-    [data, session, isAdmin, adminError, checking, loadingData, reload, signOut],
+    [
+      data,
+      session,
+      isAdmin,
+      adminError,
+      checking,
+      loadingData,
+      reload,
+      signOut,
+    ],
   );
 
-  return <AdminContext.Provider value={api}>{children}</AdminContext.Provider>;
+  return (
+    <AdminContext.Provider value={api}>
+      {children}
+    </AdminContext.Provider>
+  );
 }
 
 export function useAdmin(): AdminApi {
   const ctx = useContext(AdminContext);
-  if (!ctx) throw new Error("useAdmin must be used inside AdminProvider");
+
+  if (!ctx) {
+    throw new Error("useAdmin must be used inside AdminProvider");
+  }
+
   return ctx;
 }
