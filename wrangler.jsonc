@@ -1,0 +1,23 @@
+
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hijabi-by-anayah",
+  "compatibility_date": "2026-11-13",
+  "observability": {
+    "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "hijabi-by-anayah-db",
+      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID",
+      "migrations_dir": "cloudflare/migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "hijabi-by-anayah-media"
+    }
+  ]
+}
