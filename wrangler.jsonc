@@ -10,14 +10,14 @@
     {
       "binding": "DB",
       "database_name": "hijabi-by-anayah-db",
-      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID",
+      "database_id": "7d590ce0-faa6-4ee1-9283-50cc7b240fb5",
       "migrations_dir": "cloudflare/migrations"
     }
   ],
   "r2_buckets": [
     {
       "binding": "MEDIA",
-      "bucket_name": "hijabi-by-anayah-media"
+      "bucket_name": "hijabi-by-anayah-mediaa"
     }
   ]
 }
