@@ -6,6 +6,8 @@ import {
   setCookie,
 } from "@tanstack/react-start/server";
 import { env } from "cloudflare:workers";
+import { z } from "zod";
+import { requireAdminAuth } from "@/integrations/supabase/auth-middleware";
 import { getDB, newId } from "@/lib/cloudflare-db.server";
 
 const SESSION_COOKIE = "__Host-anayah-admin";
@@ -60,52 +62,61 @@ async function verifyPassword(
   password: string,
   stored: string,
 ): Promise<boolean> {
-  const [algorithm, iterationsText, saltText, expectedText] = stored.split("$");
+  try {
+    const [algorithm, iterationsText, saltText, expectedText] =
+      stored.split("$");
 
-  if (
-    algorithm !== "pbkdf2" ||
-    !iterationsText ||
-    !saltText ||
-    !expectedText
-  ) {
+    if (
+      algorithm !== "pbkdf2" ||
+      !iterationsText ||
+      !saltText ||
+      !expectedText
+    ) {
+      return false;
+    }
+
+    const iterations = Number(iterationsText);
+    if (
+      !Number.isSafeInteger(iterations) ||
+      iterations < 100_000 ||
+      iterations > 1_000_000
+    ) {
+      return false;
+    }
+
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(password),
+      "PBKDF2",
+      false,
+      ["deriveBits"],
+    );
+
+    const bits = await crypto.subtle.deriveBits(
+      {
+        name: "PBKDF2",
+        salt: fromBase64(saltText),
+        iterations,
+        hash: "SHA-256",
+      },
+      key,
+      256,
+    );
+
+    const actual = new Uint8Array(bits);
+    const expected = fromBase64(expectedText);
+
+    if (actual.length !== expected.length) return false;
+
+    let difference = 0;
+    for (let i = 0; i < actual.length; i++) {
+      difference |= actual[i]! ^ expected[i]!;
+    }
+
+    return difference === 0;
+  } catch {
     return false;
   }
-
-  const iterations = Number(iterationsText);
-  if (!Number.isSafeInteger(iterations) || iterations < 100_000 || iterations > 1_000_000) {
-    return false;
-  }
-
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(password),
-    "PBKDF2",
-    false,
-    ["deriveBits"],
-  );
-
-  const bits = await crypto.subtle.deriveBits(
-    {
-      name: "PBKDF2",
-      salt: fromBase64(saltText),
-      iterations,
-      hash: "SHA-256",
-    },
-    key,
-    256,
-  );
-
-  const actual = new Uint8Array(bits);
-  const expected = fromBase64(expectedText);
-
-  if (actual.length !== expected.length) return false;
-
-  let difference = 0;
-  for (let i = 0; i < actual.length; i++) {
-    difference |= actual[i]! ^ expected[i]!;
-  }
-
-  return difference === 0;
 }
 
 async function hashSessionToken(token: string): Promise<string> {
@@ -116,19 +127,43 @@ async function hashSessionToken(token: string): Promise<string> {
   return toBase64(new Uint8Array(digest));
 }
 
-/**
- * Creates the first admin account from Cloudflare secrets.
- * Existing admin accounts are never overwritten.
- */
+async function getCurrentAdmin() {
+  const token = getCookie(SESSION_COOKIE);
+  if (!token) throw new Error("Admin login required.");
+
+  const tokenHash = await hashSessionToken(token);
+
+  const admin = await getDB()
+    .prepare(
+      `SELECT a.id, a.email, a.password_hash, s.id AS session_id
+       FROM admin_sessions s
+       INNER JOIN admin_users a ON a.id = s.admin_id
+       WHERE s.id = ?
+         AND s.expires_at > ?
+         AND a.active = 1
+       LIMIT 1`,
+    )
+    .bind(tokenHash, new Date().toISOString())
+    .first<{
+      id: string;
+      email: string;
+      password_hash: string;
+      session_id: string;
+    }>();
+
+  if (!admin) throw new Error("Admin session expired. Please sign in again.");
+
+  return admin;
+}
+
+/** Creates the first admin account from Cloudflare secrets. */
 export const ensureAdminUser = createServerFn({ method: "POST" }).handler(
   async () => {
     const config = getAdminEnv();
     const email = config.ADMIN_EMAIL?.trim().toLowerCase();
     const password = config.ADMIN_PASSWORD;
 
-    if (!email || !password) {
-      return { ready: false as const };
-    }
+    if (!email || !password) return { ready: false as const };
 
     const db = getDB();
 
@@ -136,9 +171,7 @@ export const ensureAdminUser = createServerFn({ method: "POST" }).handler(
       .prepare("SELECT id FROM admin_users LIMIT 1")
       .first<{ id: string }>();
 
-    if (existing) {
-      return { ready: true as const };
-    }
+    if (existing) return { ready: true as const };
 
     const passwordHash = await hashPassword(password);
 
@@ -151,7 +184,6 @@ export const ensureAdminUser = createServerFn({ method: "POST" }).handler(
         .bind(newId(), email, passwordHash, "Anayah Admin")
         .run();
     } catch {
-      // Another simultaneous request may have created the first admin.
       const created = await db
         .prepare("SELECT id FROM admin_users LIMIT 1")
         .first<{ id: string }>();
@@ -163,16 +195,16 @@ export const ensureAdminUser = createServerFn({ method: "POST" }).handler(
   },
 );
 
-/** Signs in the store owner and creates a server-side session. */
+/** Admin login using D1 credentials. */
 export const loginAdmin = createServerFn({ method: "POST" })
-  .inputValidator((data: { email: string; password: string }) => data)
+  .inputValidator(
+    z.object({
+      email: z.string().trim().email().max(254),
+      password: z.string().min(1).max(256),
+    }),
+  )
   .handler(async ({ data }) => {
     const email = data.email.trim().toLowerCase();
-
-    if (!email || !data.password || data.password.length > 256) {
-      return { success: false as const };
-    }
-
     const db = getDB();
 
     const admin = await db
@@ -220,22 +252,18 @@ export const loginAdmin = createServerFn({ method: "POST" })
       maxAge: SESSION_DAYS * 24 * 60 * 60,
     });
 
-    return {
-      success: true as const,
-      email: admin.email,
-    };
+    return { success: true as const, email: admin.email };
   });
 
-/** Returns the currently authenticated admin, if the session is valid. */
+/** Read the current D1 admin session. */
 export const getAdminSession = createServerFn({ method: "GET" }).handler(
   async () => {
     const token = getCookie(SESSION_COOKIE);
     if (!token) return null;
 
     const tokenHash = await hashSessionToken(token);
-    const db = getDB();
 
-    const session = await db
+    const session = await getDB()
       .prepare(
         `SELECT a.id, a.email
          FROM admin_sessions s
@@ -248,13 +276,89 @@ export const getAdminSession = createServerFn({ method: "GET" }).handler(
       .bind(tokenHash, new Date().toISOString())
       .first<{ id: string; email: string }>();
 
-    return session
-      ? { id: session.id, email: session.email }
-      : null;
+    return session ? { id: session.id, email: session.email } : null;
   },
 );
 
-/** Revokes the current server-side session and clears its cookie. */
+/** Change the current admin password after verifying the old password. */
+export const updateAdminPassword = createServerFn({ method: "POST" })
+  .middleware([requireAdminAuth])
+  .inputValidator(
+    z.object({
+      currentPassword: z.string().min(1).max(256),
+      newPassword: z.string().min(8).max(256),
+    }),
+  )
+  .handler(async ({ data }) => {
+    const admin = await getCurrentAdmin();
+
+    if (!(await verifyPassword(data.currentPassword, admin.password_hash))) {
+      return { success: false as const, reason: "wrong_password" as const };
+    }
+
+    const newHash = await hashPassword(data.newPassword);
+
+    await getDB()
+      .prepare(
+        `UPDATE admin_users
+         SET password_hash = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+      )
+      .bind(newHash, admin.id)
+      .run();
+
+    // Keep the current session active; revoke other sessions.
+    await getDB()
+      .prepare("DELETE FROM admin_sessions WHERE admin_id = ? AND id != ?")
+      .bind(admin.id, admin.session_id)
+      .run();
+
+    return { success: true as const };
+  });
+
+/** Change the current admin login email after verifying the password. */
+export const updateAdminEmail = createServerFn({ method: "POST" })
+  .middleware([requireAdminAuth])
+  .inputValidator(
+    z.object({
+      currentPassword: z.string().min(1).max(256),
+      newEmail: z.string().trim().email().max(254),
+    }),
+  )
+  .handler(async ({ data }) => {
+    const admin = await getCurrentAdmin();
+    const newEmail = data.newEmail.trim().toLowerCase();
+
+    if (!(await verifyPassword(data.currentPassword, admin.password_hash))) {
+      return { success: false as const, reason: "wrong_password" as const };
+    }
+
+    if (newEmail === admin.email.toLowerCase()) {
+      return { success: false as const, reason: "same_email" as const };
+    }
+
+    const existing = await getDB()
+      .prepare("SELECT id FROM admin_users WHERE email = ? COLLATE NOCASE LIMIT 1")
+      .bind(newEmail)
+      .first<{ id: string }>();
+
+    if (existing) {
+      return { success: false as const, reason: "email_in_use" as const };
+    }
+
+    await getDB()
+      .prepare(
+        `UPDATE admin_users
+         SET email = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+      )
+      .bind(newEmail, admin.id)
+      .run();
+
+    return { success: true as const, email: newEmail };
+  });
+
+/** Revoke the current session and clear the login cookie. */
 export const logoutAdmin = createServerFn({ method: "POST" }).handler(
   async () => {
     const token = getCookie(SESSION_COOKIE);
