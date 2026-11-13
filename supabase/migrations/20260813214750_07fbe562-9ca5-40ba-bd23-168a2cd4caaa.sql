@@ -1,3 +1,0 @@
-ALTER TABLE public.products ADD COLUMN IF NOT EXISTS size TEXT;
-ALTER TABLE public.products ADD COLUMN IF NOT EXISTS fabric TEXT;
-ALTER TABLE public.products ADD COLUMN IF NOT EXISTS texture TEXT;

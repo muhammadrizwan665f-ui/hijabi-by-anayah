@@ -12,7 +12,10 @@ import { getDB, newId } from "@/lib/cloudflare-db.server";
 
 const SESSION_COOKIE = "__Host-anayah-admin";
 const SESSION_DAYS = 7;
-const PBKDF2_ITERATIONS = 310_000;
+// Cloudflare Workers' Web Crypto rejects PBKDF2 with more than 100,000
+// iterations ("NotSupportedError ... iteration counts above 100000"), so this
+// must not exceed 100_000. scripts/create-admin-sql.mjs uses the same value.
+const PBKDF2_ITERATIONS = 100_000;
 
 type AdminEnv = {
   ADMIN_EMAIL?: string;
@@ -163,8 +166,6 @@ export const ensureAdminUser = createServerFn({ method: "POST" }).handler(
     const email = config.ADMIN_EMAIL?.trim().toLowerCase();
     const password = config.ADMIN_PASSWORD;
 
-    if (!email || !password) return { ready: false as const };
-
     const db = getDB();
 
     const existing = await db
@@ -172,6 +173,15 @@ export const ensureAdminUser = createServerFn({ method: "POST" }).handler(
       .first<{ id: string }>();
 
     if (existing) return { ready: true as const };
+
+    // No admin yet and no secrets to create one from.
+    if (!email || !password) {
+      console.error(
+        "[admin] No admin exists and ADMIN_EMAIL / ADMIN_PASSWORD secrets are not set. " +
+          "Run scripts/create-admin-sql.mjs and apply the SQL with wrangler d1 execute.",
+      );
+      return { ready: false as const, reason: "missing_secrets" as const };
+    }
 
     const passwordHash = await hashPassword(password);
 

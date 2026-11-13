@@ -1,1 +1,0 @@
-UPDATE public.site_settings SET data = jsonb_set(data, '{whatsapp}', '"+923351038550"') WHERE id = true;
