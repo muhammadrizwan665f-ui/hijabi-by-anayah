@@ -1,4 +1,3 @@
-
 import { env } from "cloudflare:workers";
 
 interface D1Result<T = Record<string, unknown>> {
@@ -42,26 +41,32 @@ interface CloudflareBindings {
   MEDIA: R2Bucket;
 }
 
-function getBindings(): CloudflareBindings {
-  const bindings = env as unknown as Partial<CloudflareBindings>;
+function getDBBinding(): D1Database {
+  const db = (env as unknown as Partial<CloudflareBindings>).DB;
 
-  if (!bindings.DB) {
+  if (!db) {
     throw new Error("Cloudflare D1 binding DB is not configured.");
   }
 
-  if (!bindings.MEDIA) {
+  return db;
+}
+
+function getMediaBinding(): R2Bucket {
+  const media = (env as unknown as Partial<CloudflareBindings>).MEDIA;
+
+  if (!media) {
     throw new Error("Cloudflare R2 binding MEDIA is not configured.");
   }
 
-  return bindings as CloudflareBindings;
+  return media;
 }
 
 export function getDB(): D1Database {
-  return getBindings().DB;
+  return getDBBinding();
 }
 
 export function getMedia(): R2Bucket {
-  return getBindings().MEDIA;
+  return getMediaBinding();
 }
 
 export function newOrderNo(): string {
