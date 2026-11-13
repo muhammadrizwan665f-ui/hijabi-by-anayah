@@ -1,4 +1,3 @@
-
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
@@ -6,6 +5,9 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    ssr: {
+      external: ["cloudflare:workers"],
+    },
     build: {
       rolldownOptions: {
         external: ["cloudflare:workers"],
