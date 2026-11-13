@@ -1,40 +1,93 @@
+
+import { getDB } from "./cloudflare-db.server";
 import { sendWebPush } from "./push.server";
 
-export type PushReport = { devices: number; sent: number; details: string[] };
+export type PushReport = {
+  devices: number;
+  sent: number;
+  details: string[];
+};
 
 /** Sends a notification to every registered admin device. Never throws. */
 export async function broadcastAdminPush(
-  admin: { from: (t: string) => any },
   data: { title: string; message: string; url?: string },
 ): Promise<PushReport> {
-  const report: PushReport = { devices: 0, sent: 0, details: [] };
+  const report: PushReport = {
+    devices: 0,
+    sent: 0,
+    details: [],
+  };
+
   try {
-    const { data: subs, error } = await admin
-      .from("push_subscriptions")
-      .select("id, endpoint, p256dh, auth");
-    if (error) report.details.push("read subscriptions failed: " + error.message);
-    if (!subs?.length) return report;
+    const db = getDB();
+
+    const result = await db
+      .prepare(
+        "SELECT id, endpoint, p256dh, auth FROM push_subscriptions",
+      )
+      .all<{
+        id: string;
+        endpoint: string;
+        p256dh: string;
+        auth: string;
+      }>();
+
+    const subs = result.results ?? [];
+
+    if (!subs.length) return report;
+
     report.devices = subs.length;
 
     const dead: string[] = [];
+
     await Promise.all(
-      subs.map(async (s: any) => {
+      subs.map(async (subscription) => {
         try {
-          const r = await sendWebPush(
-            { endpoint: s.endpoint, p256dh: s.p256dh, auth: s.auth },
+          const response = await sendWebPush(
+            {
+              endpoint: subscription.endpoint,
+              p256dh: subscription.p256dh,
+              auth: subscription.auth,
+            },
             data,
           );
-          if (r.ok) report.sent += 1;
-          else report.details.push("push service replied " + r.status);
-          if (r.gone) dead.push(s.id);
-        } catch (e) {
-          report.details.push("send error: " + (e instanceof Error ? e.message : String(e)));
+
+          if (response.ok) {
+            report.sent += 1;
+          } else {
+            report.details.push(
+              "Push service replied " + response.status,
+            );
+          }
+
+          if (response.gone) {
+            dead.push(subscription.id);
+          }
+        } catch (error) {
+          report.details.push(
+            "Send error: " +
+              (error instanceof Error ? error.message : String(error)),
+          );
         }
       }),
     );
-    if (dead.length) await admin.from("push_subscriptions").delete().in("id", dead);
-  } catch (e) {
-    report.details.push("error: " + (e instanceof Error ? e.message : String(e)));
+
+    if (dead.length) {
+      const placeholders = dead.map(() => "?").join(", ");
+
+      await db
+        .prepare(
+          `DELETE FROM push_subscriptions WHERE id IN (${placeholders})`,
+        )
+        .bind(...dead)
+        .run();
+    }
+  } catch (error) {
+    report.details.push(
+      "Error: " +
+        (error instanceof Error ? error.message : String(error)),
+    );
   }
+
   return report;
 }
