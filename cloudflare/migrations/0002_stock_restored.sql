@@ -1,0 +1,3 @@
+
+ALTER TABLE orders
+ADD COLUMN stock_restored INTEGER NOT NULL DEFAULT 0;
