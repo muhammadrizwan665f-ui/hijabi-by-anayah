@@ -202,7 +202,14 @@ function ProductPage() {
 
         <div className="mx-auto flex h-[calc(100dvh-8.5rem)] min-h-[27rem] max-w-xl flex-col gap-2.5 px-1 pt-1.5">
           {/* Main image */}
-          <div className="relative min-h-[6rem] flex-1 overflow-hidden rounded-2xl border border-[#E6DCCB] bg-white">
+          <div
+            className="flex min-h-[6rem] flex-1 items-center justify-center"
+            style={{ containerType: "size" }}
+          >
+          <div
+            className="relative aspect-square overflow-hidden rounded-2xl border border-[#E6DCCB] bg-white"
+            style={{ width: "min(100cqw, 100cqh)" }}
+          >
             <AnimatePresence mode="wait">
               <motion.div
                 key={`m-${activeColor?.name ?? "all"}-${img}`}
@@ -226,10 +233,11 @@ function ProductPage() {
                 <img
                   src={gallery[img] ?? gallery[0]}
                   alt={activeColor ? `${product.name} — ${activeColor.name}` : product.name}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-contain"
                 />
               </motion.div>
             </AnimatePresence>
+          </div>
           </div>
 
           {/* Thumbnails */}
