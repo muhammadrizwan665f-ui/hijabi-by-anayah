@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import {
@@ -20,9 +20,14 @@ import { useStore } from "@/lib/store";
 export function Footer() {
   const { settings } = useStore();
   const [email, setEmail] = useState("");
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // Mobile product page is a single non-scrolling screen
+  const onProductPage = pathname.startsWith("/product/");
 
   return (
-    <footer className="mt-24 border-t border-border bg-surface-2">
+    <footer
+      className={`mt-24 border-t border-border bg-surface-2${onProductPage ? " max-lg:hidden" : ""}`}
+    >
       <div className="mx-auto max-w-7xl px-4 py-14">
         <div className="premium-card mb-14 flex flex-col gap-6 border border-primary p-6 text-primary md:grid md:grid-cols-2 md:items-center sm:p-8 bg-surface">
           <div>

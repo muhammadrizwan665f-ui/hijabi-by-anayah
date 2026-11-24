@@ -37,6 +37,8 @@ export function Header() {
   const [bannerIndex, setBannerIndex] = useState(0);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const count = cart.reduce((a, l) => a + l.qty, 0);
+  // Product pages draw their own mobile header
+  const onProductPage = pathname.startsWith("/product/");
 
   const banners = useMemo(
     () => [
@@ -75,7 +77,12 @@ export function Header() {
 
   return (
     <>
-      <div className="relative h-10 overflow-hidden border-b border-primary/20 bg-surface text-primary sm:h-9">
+      <div
+        className={cn(
+          "relative h-10 overflow-hidden border-b border-primary/20 bg-surface text-primary sm:h-9",
+          onProductPage && "max-lg:hidden",
+        )}
+      >
         <AnimatePresence mode="wait">
           <motion.div
             key={bannerIndex}
@@ -106,6 +113,7 @@ export function Header() {
       <header
         className={cn(
           "sticky top-0 z-50 transition-all duration-300",
+          onProductPage && "max-lg:hidden",
           scrolled ? "glass shadow-soft" : "bg-background/90 backdrop-blur-md border-b border-primary/5",
         )}
       >

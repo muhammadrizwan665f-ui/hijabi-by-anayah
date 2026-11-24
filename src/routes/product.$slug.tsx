@@ -1,15 +1,18 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
+  ArrowLeft,
   BadgeCheck,
   Check,
   ChevronLeft,
   ChevronRight,
   Heart,
   RotateCcw,
+  Search,
   Share2,
   ShieldCheck,
+  ShoppingCart,
   Sparkles,
   Star,
   Truck,
@@ -20,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
@@ -57,7 +61,10 @@ export const Route = createFileRoute("/product/$slug")({
 
 function ProductPage() {
   const { slug } = Route.useParams();
-  const { products, payments, addToCart, wishlist, toggleWishlist, settings } = useStore();
+  const { products, payments, addToCart, wishlist, toggleWishlist, settings, cart } = useStore();
+  const router = useRouter();
+  const [searchText, setSearchText] = useState("");
+  const cartCount = cart.reduce((a, l) => a + l.qty, 0);
   const product = products.find((p) => p.slug === slug);
   const [qty, setQty] = useState(1);
   const [img, setImg] = useState(0);
@@ -127,10 +134,73 @@ function ProductPage() {
     "flex flex-1 items-center justify-center text-[13px] font-bold uppercase tracking-wider";
 
   return (
-    <div className="mx-auto max-w-7xl px-3 py-1 sm:py-6">
+    <div className="mx-auto max-w-7xl px-3 lg:py-6">
       {/* MOBILE: everything fits on one screen, no scrolling (below lg) */}
       <div className="lg:hidden">
-        <div className="mx-auto flex h-[calc(100dvh-11.5rem)] min-h-[27rem] max-w-xl flex-col gap-2.5 px-1 pt-1.5">
+        {/* Mobile header: back, ANAYAH, search, cart */}
+        <header className="sticky top-0 z-50 -mx-3 flex h-14 items-center justify-between bg-[#FAF8F5] px-4">
+          <button
+            type="button"
+            onClick={() => router.history.back()}
+            aria-label="Go back"
+            className="flex size-9 items-center justify-center text-[#6F4E1B]"
+          >
+            <ArrowLeft className="size-6" strokeWidth={1.5} />
+          </button>
+          <Link
+            to="/"
+            className="font-display text-[1.65rem] font-medium uppercase tracking-[0.08em] text-[#4A3B2A]"
+          >
+            Anayah
+          </Link>
+          <div className="flex items-center gap-1">
+            <Sheet>
+              <SheetTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Search"
+                  className="flex size-9 items-center justify-center text-[#6F4E1B]"
+                >
+                  <Search className="size-6" strokeWidth={1.5} />
+                </button>
+              </SheetTrigger>
+              <SheetContent side="top" className="h-32 pt-10">
+                <form
+                  className="mx-auto mt-4 flex max-w-md items-center gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    window.location.href = `/shop?q=${encodeURIComponent(searchText)}`;
+                  }}
+                >
+                  <div className="relative w-full">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      autoFocus
+                      value={searchText}
+                      onChange={(e) => setSearchText(e.target.value)}
+                      placeholder="Search hijabs, chadars..."
+                      className="h-12 rounded-full pl-10 text-base"
+                    />
+                  </div>
+                </form>
+              </SheetContent>
+            </Sheet>
+            <Link
+              to="/cart"
+              aria-label="Cart"
+              className="relative flex size-9 items-center justify-center text-[#6F4E1B]"
+            >
+              <ShoppingCart className="size-6" strokeWidth={1.5} />
+              {cartCount > 0 ? (
+                <span className="absolute -right-0.5 -top-0.5 flex size-5 items-center justify-center rounded-full bg-[#8B5E1A] text-[10px] font-bold text-white">
+                  {cartCount}
+                </span>
+              ) : null}
+            </Link>
+          </div>
+        </header>
+
+        <div className="mx-auto flex h-[calc(100dvh-8.5rem)] min-h-[27rem] max-w-xl flex-col gap-2.5 px-1 pt-1.5">
           {/* Main image */}
           <div className="relative min-h-[6rem] flex-1 overflow-hidden rounded-2xl border border-[#E6DCCB] bg-white">
             <AnimatePresence mode="wait">
@@ -700,7 +770,7 @@ function ProductPage() {
           product.included.length > 0 ? "included" : 
           "reviews"
         } 
-        className="mt-10 sm:mt-12"
+        className="mt-10 max-lg:hidden sm:mt-12"
       >
         <TabsList className="no-scrollbar flex w-full justify-start overflow-x-auto pb-1 sm:justify-center">
           {product.features.length > 0 && <TabsTrigger value="features" className="shrink-0">Features</TabsTrigger>}
@@ -815,7 +885,7 @@ function ProductPage() {
         )}
       </Tabs>
 
-      <section className="mt-20">
+      <section className="mt-20 max-lg:hidden">
         <h2 className="text-2xl font-bold">You may also like</h2>
         <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
           {related.map((p, i) => (
