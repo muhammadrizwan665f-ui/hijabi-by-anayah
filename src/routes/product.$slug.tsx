@@ -33,7 +33,6 @@ import {
 } from "@/components/ui/dialog";
 import { Countdown } from "@/components/site/countdown";
 import { ProductCard } from "@/components/site/product-card";
-import { Reveal } from "@/components/site/reveal";
 import { discountPct, formatPKR, lineTotal, unitPrice } from "@/lib/pricing";
 import { useStore } from "@/lib/store";
 import { useServerFn } from "@tanstack/react-start";
@@ -96,8 +95,223 @@ function ProductPage() {
     `Assalam o Alaikum! I want to order: ${product.name} (Qty ${qty}) — ${formatPKR(t.total)}`,
   );
 
+  const canBuy = !(outOfStock || activeColorOut);
+
+  const pickColor = (i: number) => {
+    const c = colors[i];
+    if (!c || colorSoldOut(c)) return;
+    // Tapping the selected colour again goes back to the all-colours gallery
+    setColorIdx(colorIdx === i ? null : i);
+    setImg(0);
+  };
+
+  const handleAddToCart = () => {
+    if (!canBuy) return;
+    if (needsColor) {
+      toast.error("Please select a colour first");
+      return;
+    }
+    addToCart(product.id, qty, activeColor?.name);
+    toast.success("Added to cart", {
+      description: activeColor ? `${product.name} — ${activeColor.name}` : product.name,
+    });
+  };
+
+  const mobileSpecs = [
+    { label: "Fabric", value: product.fabric },
+    { label: "Texture", value: product.texture },
+    { label: "Size", value: product.size },
+  ].filter((s) => s.value);
+
+  const pillText =
+    "flex flex-1 items-center justify-center text-[13px] font-bold uppercase tracking-wider";
+
   return (
     <div className="mx-auto max-w-7xl px-3 py-1 sm:py-6">
+      {/* MOBILE: everything fits on one screen, no scrolling (below lg) */}
+      <div className="lg:hidden">
+        <div className="mx-auto flex h-[calc(100dvh-11.5rem)] min-h-[27rem] max-w-xl flex-col gap-2.5 px-1 pt-1.5">
+          {/* Main image */}
+          <div className="relative min-h-[6rem] flex-1 overflow-hidden rounded-2xl border border-[#E6DCCB] bg-white">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`m-${activeColor?.name ?? "all"}-${img}`}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.2}
+                onDragEnd={(_, info) => {
+                  const threshold = 50;
+                  if (info.offset.x > threshold) {
+                    setImg((prev) => (prev > 0 ? prev - 1 : gallery.length - 1));
+                  } else if (info.offset.x < -threshold) {
+                    setImg((prev) => (prev < gallery.length - 1 ? prev + 1 : 0));
+                  }
+                }}
+                className="h-full cursor-grab touch-pan-y active:cursor-grabbing"
+              >
+                <img
+                  src={gallery[img] ?? gallery[0]}
+                  alt={activeColor ? `${product.name} — ${activeColor.name}` : product.name}
+                  className="h-full w-full object-cover"
+                />
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {/* Thumbnails */}
+          <div className="relative">
+            <div className="no-scrollbar flex gap-2 overflow-x-auto p-0.5">
+              {gallery.map((src, i) => (
+                <button
+                  type="button"
+                  key={`m-${src}-${i}`}
+                  onClick={() => setImg(i)}
+                  aria-label={`View image ${i + 1}`}
+                  className={`relative size-14 shrink-0 overflow-hidden rounded-xl border-2 bg-white ${
+                    i === img ? "border-[#8B5E1A]" : "border-[#E6DCCB]"
+                  }`}
+                >
+                  <img src={src} alt="" loading="lazy" className="size-full object-cover" />
+                  {i === img && (
+                    <span className="absolute bottom-0.5 right-0.5 flex size-4 items-center justify-center rounded-full bg-[#8B5E1A]">
+                      <Check className="size-2.5 text-white" />
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+            {gallery.length > 5 && (
+              <span className="pointer-events-none absolute inset-y-0 right-0 flex w-8 items-center justify-end bg-gradient-to-l from-background to-transparent">
+                <ChevronRight className="size-4 text-[#8B5E1A]" />
+              </span>
+            )}
+          </div>
+
+          {/* Product info */}
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between gap-2">
+              <p
+                className={`flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide ${
+                  outOfStock || lowStock ? "text-[#8B1E26]" : "text-[#4B7F52]"
+                }`}
+              >
+                <span className="size-1.5 rounded-full bg-current" />
+                {outOfStock
+                  ? "Out of stock"
+                  : lowStock
+                    ? `Only ${product.stock} left`
+                    : "In stock · Ready to ship"}
+              </p>
+              {product.flashSale && product.flashEndsAt ? (
+                <span className="flex items-center gap-1 text-[11px] font-bold text-destructive">
+                  <Zap className="size-3.5" />
+                  <Countdown target={product.flashEndsAt} compact />
+                </span>
+              ) : null}
+            </div>
+
+            <h1 className="font-display text-[1.75rem] font-bold leading-tight text-[#2A1F14]">
+              {product.name}
+            </h1>
+            {product.tagline ? (
+              <p className="text-[13px] italic leading-snug text-[#6F665C]">{product.tagline}</p>
+            ) : null}
+
+            <div className="flex items-center gap-1.5 text-[13px]">
+              <div className="flex">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star
+                    key={i}
+                    className={`size-4 ${
+                      i < Math.round(product.rating)
+                        ? "fill-[#C99A3A] text-[#C99A3A]"
+                        : "text-[#D8CFC0]"
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className="font-semibold text-[#2A1F14]">{product.rating.toFixed(1)}</span>
+              <span className="text-[#6F665C]">· {product.sold.toLocaleString()} sold</span>
+            </div>
+
+            <p className="text-[1.65rem] font-bold leading-tight text-[#8B5E1A]">
+              {formatPKR(unitPrice(product))}
+            </p>
+
+            {mobileSpecs.length > 0 && (
+              <div
+                className="mt-0.5 grid gap-2 border-y border-[#E6DCCB] py-1.5"
+                style={{ gridTemplateColumns: `repeat(${mobileSpecs.length}, minmax(0, 1fr))` }}
+              >
+                {mobileSpecs.map((s) => (
+                  <div key={s.label} className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[#6F665C]">
+                      {s.label}
+                    </p>
+                    <p className="truncate text-[13px] font-medium text-[#2A1F14]">{s.value}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Colour / design selector */}
+          {colors.length > 0 ? (
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-baseline justify-between gap-2">
+                <h2 className="font-display text-lg font-bold text-[#2A1F14]">
+                  Select Design / Colour
+                </h2>
+                <p className="text-xs text-[#6F665C]">
+                  Selected:{" "}
+                  <span className="font-semibold text-[#8B5E1A]">{activeColor?.name ?? "—"}</span>
+                </p>
+              </div>
+              <div className="no-scrollbar flex gap-2 overflow-x-auto p-0.5">
+                {colors.map((c, i) => {
+                  const soldOut = colorSoldOut(c);
+                  const selected = colorIdx === i;
+                  const thumb = c.images[0];
+                  return (
+                    <button
+                      type="button"
+                      key={`m-${c.name}-${i}`}
+                      disabled={soldOut}
+                      onClick={() => pickColor(i)}
+                      aria-label={soldOut ? `${c.name} — Sold out` : c.name}
+                      aria-pressed={selected}
+                      className="flex shrink-0 flex-col items-center gap-1 disabled:opacity-50"
+                    >
+                      <span
+                        className={`block size-14 overflow-hidden rounded-xl border-2 ${
+                          selected ? "border-[#8B5E1A] shadow-sm" : "border-[#E6DCCB]"
+                        }`}
+                        style={thumb ? undefined : { backgroundColor: c.hex || "#C9A88A" }}
+                      >
+                        {thumb ? <img src={thumb} alt="" className="size-full object-cover" /> : null}
+                      </span>
+                      <span
+                        className={`whitespace-nowrap text-[11px] ${
+                          selected ? "font-bold text-[#2A1F14]" : "text-[#6F665C]"
+                        } ${soldOut ? "line-through" : ""}`}
+                      >
+                        {c.name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      {/* DESKTOP: original layout (lg and up) */}
+      <div className="hidden lg:block">
       <nav className="text-sm text-muted-foreground">
         <Link to="/" className="hover:text-primary">
           Home
@@ -476,6 +690,7 @@ function ProductPage() {
           </div>
         </div>
       </div>
+      </div>
 
       {/* DETAILS */}
       <Tabs 
@@ -609,56 +824,49 @@ function ProductPage() {
         </div>
       </section>
 
-      {/* Sticky mobile buy bar */}
-      <Reveal className="fixed inset-x-0 bottom-0 z-40 lg:hidden">
-        <div className="glass flex items-center gap-3 border-t border-primary/20 p-3 pb-safe-bottom">
-          <div className="flex-1 min-w-0">
-            <p className="font-display text-base font-bold leading-tight truncate sm:text-lg">{formatPKR(t.total)}</p>
-            {outOfStock ? (
-              <p className="text-[10px] font-semibold text-destructive leading-tight sm:text-[11px]">Out of Stock</p>
-            ) : lowStock ? (
-              <p className="text-[10px] font-semibold text-destructive leading-tight sm:text-[11px]">Only {product.stock} left</p>
-            ) : null}
-          </div>
-          <Button
-            size="sm"
-            className="h-10 px-3 text-xs sm:h-11 sm:px-4 sm:text-sm"
-            disabled={outOfStock || activeColorOut}
-
-            onClick={() => {
-              if (outOfStock || activeColorOut) return;
-              if (needsColor) {
-                toast.error("Please select a colour first");
-                return;
-              }
-              addToCart(product.id, qty, activeColor?.name);
-              toast.success("Added to cart");
-            }}
+      {/* Mobile bottom bar: WhatsApp + Add to Cart + Buy Now */}
+      <div className="fixed inset-x-0 bottom-0 z-40 lg:hidden">
+        <div className="mx-auto flex max-w-xl items-center gap-3 rounded-t-3xl border-t border-[#E6DCCB] bg-[#F7F1E5] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_-12px_rgba(43,37,33,0.25)]">
+          <a
+            href={`https://wa.me/${settings.whatsapp}?text=${waText}`}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Order on WhatsApp"
+            className="shrink-0"
           >
-            Add to Cart
-          </Button>
-          {outOfStock || activeColorOut ? (
-            <Button variant="secondary" size="sm" className="h-10 px-3 text-xs sm:h-11 sm:px-4 sm:text-sm" disabled>
-              Buy Now
-            </Button>
-          ) : needsColor ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-10 px-3 text-xs sm:h-11 sm:px-4 sm:text-sm"
-              onClick={() => toast.error("Please select a colour first")}
+            <img src="/whatsapp-icon.png" alt="" className="size-12 rounded-full" />
+          </a>
+          <div className="flex h-12 flex-1 overflow-hidden rounded-full shadow-md">
+            <button
+              type="button"
+              disabled={!canBuy}
+              onClick={handleAddToCart}
+              className={`${pillText} bg-[#8B5E1A] text-white disabled:opacity-60`}
             >
-              Buy Now
-            </Button>
-          ) : (
-            <Button variant="secondary" size="sm" className="h-10 px-3 text-xs sm:h-11 sm:px-4 sm:text-sm" asChild>
-              <Link to="/checkout" onClick={() => addToCart(product.id, qty, activeColor?.name)}>
-                Buy Now
+              {outOfStock ? "Out of stock" : activeColorOut ? "Sold out" : "Add to cart"}
+            </button>
+            {!canBuy ? (
+              <span className={`${pillText} bg-[#2E2D24] text-[#D6B25E] opacity-60`}>Buy now</span>
+            ) : needsColor ? (
+              <button
+                type="button"
+                onClick={() => toast.error("Please select a colour first")}
+                className={`${pillText} bg-[#2E2D24] text-[#D6B25E]`}
+              >
+                Buy now
+              </button>
+            ) : (
+              <Link
+                to="/checkout"
+                onClick={() => addToCart(product.id, qty, activeColor?.name)}
+                className={`${pillText} bg-[#2E2D24] text-[#D6B25E]`}
+              >
+                Buy now
               </Link>
-            </Button>
-          )}
+            )}
+          </div>
         </div>
-      </Reveal>
+      </div>
     </div>
   );
 }
