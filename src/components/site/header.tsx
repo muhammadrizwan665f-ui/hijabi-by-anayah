@@ -392,13 +392,19 @@ export function BackToTop() {
 
 export function WhatsAppButton() {
   const { settings } = useStore();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // The product page has its own WhatsApp button inside the mobile bottom bar
+  const onProductPage = pathname.startsWith("/product/");
   return (
     <a
       href={`https://wa.me/${settings.whatsapp}?text=${encodeURIComponent("Assalam o Alaikum! I want to order from Hijabi By Anayah.")}`}
       target="_blank"
       rel="noreferrer"
       aria-label="Order on WhatsApp"
-      className="fixed bottom-6 right-5 z-40 flex size-16 items-center justify-center rounded-full shadow-premium transition-transform hover:scale-105"
+      className={cn(
+        "fixed bottom-6 right-5 z-40 flex size-16 items-center justify-center rounded-full shadow-premium transition-transform hover:scale-105",
+        onProductPage && "max-lg:hidden",
+      )}
     >
       <img src="/whatsapp-icon.png" alt="" className="size-16" />
     </a>
