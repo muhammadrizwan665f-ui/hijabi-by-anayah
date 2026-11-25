@@ -200,7 +200,7 @@ function ProductPage() {
           </div>
         </header>
 
-        <div className="mx-auto flex h-[calc(100dvh-8.5rem)] min-h-[27rem] max-w-xl flex-col gap-2.5 px-1 pt-1.5">
+        <div className="mx-auto flex h-[calc(100dvh-8.5rem)] min-h-[27rem] max-w-xl flex-col gap-2 px-1 pt-1">
           {/* Main image */}
           <div
             className="flex min-h-[6rem] flex-1 items-center justify-center"
@@ -250,7 +250,7 @@ function ProductPage() {
           <div className="flex flex-col gap-1">
             <div className="flex items-center justify-between gap-2">
               <p
-                className={`flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide ${
+                className={`flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide ${
                   outOfStock || lowStock ? "text-[#8B1E26]" : "text-[#4B7F52]"
                 }`}
               >
@@ -269,14 +269,14 @@ function ProductPage() {
               ) : null}
             </div>
 
-            <h1 className="font-display text-[1.75rem] font-bold leading-tight text-[#2A1F14]">
+            <h1 className="font-display text-[1.35rem] font-bold leading-tight text-[#2A1F14]">
               {product.name}
             </h1>
             {product.tagline ? (
-              <p className="text-[13px] italic leading-snug text-[#6F665C]">{product.tagline}</p>
+              <p className="text-[11.5px] italic leading-snug text-[#6F665C]">{product.tagline}</p>
             ) : null}
 
-            <div className="flex items-center gap-1.5 text-[13px]">
+            <div className="flex items-center gap-1.5 text-[12px]">
               <div className="flex">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star
@@ -382,7 +382,7 @@ function ProductPage() {
               </Sheet>
             </div>
 
-            <p className="text-[1.65rem] font-bold leading-tight text-[#8B5E1A]">
+            <p className="text-[1.3rem] font-bold leading-tight text-[#8B5E1A]">
               {formatPKR(unitPrice(product))}
             </p>
 
@@ -393,10 +393,10 @@ function ProductPage() {
               >
                 {mobileSpecs.map((s) => (
                   <div key={s.label} className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[#6F665C]">
+                    <p className="text-[9px] font-semibold uppercase tracking-wider text-[#6F665C]">
                       {s.label}
                     </p>
-                    <p className="truncate text-[13px] font-medium text-[#2A1F14]">{s.value}</p>
+                    <p className="truncate text-[12px] font-medium text-[#2A1F14]">{s.value}</p>
                   </div>
                 ))}
               </div>
@@ -407,7 +407,7 @@ function ProductPage() {
           {colors.length > 0 ? (
             <div className="flex flex-col gap-1.5">
               <div className="flex items-baseline justify-between gap-2">
-                <h2 className="font-display text-lg font-bold text-[#2A1F14]">
+                <h2 className="font-display text-base font-bold text-[#2A1F14]">
                   Select Design / Colour
                 </h2>
                 <p className="text-xs text-[#6F665C]">
@@ -431,7 +431,7 @@ function ProductPage() {
                       className="flex shrink-0 flex-col items-center gap-1 disabled:opacity-50"
                     >
                       <span
-                        className={`block size-14 overflow-hidden rounded-xl border-2 ${
+                        className={`block size-12 overflow-hidden rounded-xl border-2 ${
                           selected ? "border-[#8B5E1A] shadow-sm" : "border-[#E6DCCB]"
                         }`}
                         style={thumb ? undefined : { backgroundColor: c.hex || "#C9A88A" }}
@@ -439,7 +439,7 @@ function ProductPage() {
                         {thumb ? <img src={thumb} alt="" className="size-full object-cover" /> : null}
                       </span>
                       <span
-                        className={`whitespace-nowrap text-[11px] ${
+                        className={`whitespace-nowrap text-[10px] ${
                           selected ? "font-bold text-[#2A1F14]" : "text-[#6F665C]"
                         } ${soldOut ? "line-through" : ""}`}
                       >
