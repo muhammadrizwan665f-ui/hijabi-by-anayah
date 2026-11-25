@@ -210,63 +210,40 @@ function ProductPage() {
             className="relative aspect-square overflow-hidden rounded-2xl border border-[#E6DCCB] bg-white"
             style={{ width: "min(100cqw, 100cqh)" }}
           >
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={`m-${activeColor?.name ?? "all"}-${img}`}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-                drag="x"
-                dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0.2}
-                onDragEnd={(_, info) => {
-                  const threshold = 50;
-                  if (info.offset.x > threshold) {
-                    setImg((prev) => (prev > 0 ? prev - 1 : gallery.length - 1));
-                  } else if (info.offset.x < -threshold) {
-                    setImg((prev) => (prev < gallery.length - 1 ? prev + 1 : 0));
-                  }
-                }}
-                className="h-full cursor-grab touch-pan-y active:cursor-grabbing"
-              >
-                <img
-                  src={gallery[img] ?? gallery[0]}
-                  alt={activeColor ? `${product.name} — ${activeColor.name}` : product.name}
-                  className="h-full w-full object-contain"
-                />
-              </motion.div>
-            </AnimatePresence>
-          </div>
-          </div>
-
-          {/* Thumbnails */}
-          <div className="relative">
-            <div className="no-scrollbar flex gap-2 overflow-x-auto p-0.5">
+            <div
+              key={`m-${activeColor?.name ?? "all"}`}
+              onScroll={(e) => {
+                const el = e.currentTarget;
+                const i = Math.round(el.scrollLeft / el.clientWidth);
+                if (i !== img) setImg(i);
+              }}
+              className="no-scrollbar flex h-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain"
+            >
               {gallery.map((src, i) => (
-                <button
-                  type="button"
-                  key={`m-${src}-${i}`}
-                  onClick={() => setImg(i)}
-                  aria-label={`View image ${i + 1}`}
-                  className={`relative size-14 shrink-0 overflow-hidden rounded-xl border-2 bg-white ${
-                    i === img ? "border-[#8B5E1A]" : "border-[#E6DCCB]"
-                  }`}
-                >
-                  <img src={src} alt="" loading="lazy" className="size-full object-cover" />
-                  {i === img && (
-                    <span className="absolute bottom-0.5 right-0.5 flex size-4 items-center justify-center rounded-full bg-[#8B5E1A]">
-                      <Check className="size-2.5 text-white" />
-                    </span>
-                  )}
-                </button>
+                <div key={`m-${src}-${i}`} className="size-full shrink-0 snap-center snap-always">
+                  <img
+                    src={src}
+                    alt={`${activeColor ? `${product.name} — ${activeColor.name}` : product.name} ${i + 1}`}
+                    loading={i === 0 ? "eager" : "lazy"}
+                    draggable={false}
+                    className="size-full object-contain"
+                  />
+                </div>
               ))}
             </div>
-            {gallery.length > 5 && (
-              <span className="pointer-events-none absolute inset-y-0 right-0 flex w-8 items-center justify-end bg-gradient-to-l from-background to-transparent">
-                <ChevronRight className="size-4 text-[#8B5E1A]" />
-              </span>
+            {gallery.length > 1 && (
+              <div className="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center gap-1.5">
+                {gallery.map((_, i) => (
+                  <span
+                    key={i}
+                    className={`h-1.5 rounded-full transition-all ${
+                      i === img ? "w-4 bg-[#8B5E1A]" : "w-1.5 bg-[#8B5E1A]/30"
+                    }`}
+                  />
+                ))}
+              </div>
             )}
+          </div>
           </div>
 
           {/* Product info */}
