@@ -25,7 +25,7 @@ const NAV = [
   { to: "/shop", label: "STOLES", search: { q: "stole" } },
   { to: "/shop", label: "CHADAREN", search: { q: "chadar" } },
   { to: "/shop", label: "ACCESSORIES", search: { category: "Accessories" } },
-  { to: "/shop", label: "NEW ARRIVAL" },
+  { to: "/shop", label: "NEW ARRIVAL", search: { sort: "new" } },
   { to: "/deals", label: "SALE" },
 ] as any[];
 

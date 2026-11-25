@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,12 +22,14 @@ import { useStore } from "@/lib/store";
 interface ShopSearch {
   q?: string | undefined;
   category?: string | undefined;
+  sort?: string | undefined;
 }
 
 export const Route = createFileRoute("/shop")({
   validateSearch: (search: Record<string, unknown>): ShopSearch => ({
     q: typeof search["q"] === "string" ? (search["q"] as string) : undefined,
     category: typeof search["category"] === "string" ? (search["category"] as string) : undefined,
+    sort: typeof search["sort"] === "string" ? (search["sort"] as string) : undefined,
   }),
 
   head: () => ({
@@ -61,6 +63,14 @@ function Shop() {
   const [minRating, setMinRating] = useState(0);
   const [inStockOnly, setInStockOnly] = useState(false);
   const [sort, setSort] = useState<SortKey>("featured");
+
+  // Keep filters in sync with the URL (menu links change ?q= / ?category= while
+  // this page stays mounted, so state seeded once from the URL goes stale)
+  useEffect(() => {
+    setQ(search.q ?? "");
+    setCats(search.category ? [search.category] : []);
+    setSort(search.sort === "new" ? "new" : "featured");
+  }, [search.q, search.category, search.sort]);
 
   const filtered = useMemo(() => {
     let list = products.filter((p) => p.active);
