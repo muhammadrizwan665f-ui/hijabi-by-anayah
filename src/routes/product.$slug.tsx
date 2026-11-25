@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
@@ -291,6 +291,95 @@ function ProductPage() {
               </div>
               <span className="font-semibold text-[#2A1F14]">{product.rating.toFixed(1)}</span>
               <span className="text-[#6F665C]">· {product.sold.toLocaleString()} sold</span>
+              <Sheet>
+                <SheetTrigger asChild>
+                  <button
+                    type="button"
+                    className="ml-auto flex items-center gap-0.5 text-[12px] font-semibold text-[#8B5E1A] underline-offset-2 active:underline"
+                  >
+                    See reviews ({product.reviews.length})
+                    <ChevronRight className="size-3.5" />
+                  </button>
+                </SheetTrigger>
+                <SheetContent
+                  side="bottom"
+                  className="flex h-[85dvh] flex-col gap-0 rounded-t-3xl border-[#E6DCCB] bg-[#FAF8F5] p-0"
+                >
+                  <SheetHeader className="shrink-0 border-b border-[#E6DCCB] px-5 pb-3 pt-5 text-left">
+                    <SheetTitle className="font-display text-xl font-bold text-[#2A1F14]">
+                      Customer Reviews
+                    </SheetTitle>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-1.5 text-[13px]">
+                        <Star className="size-4 fill-[#C99A3A] text-[#C99A3A]" />
+                        <span className="font-semibold text-[#2A1F14]">
+                          {product.rating.toFixed(1)}
+                        </span>
+                        <span className="text-[#6F665C]">· {product.reviews.length} reviews</span>
+                      </div>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button size="sm" className="rounded-full bg-[#8B5E1A] text-white hover:bg-[#8B5E1A]/90">
+                            Write a Review
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[500px]">
+                          <ReviewForm
+                            productId={product.id}
+                            onComplete={() => window.location.reload()}
+                          />
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </SheetHeader>
+                  <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+                    {product.reviews.length === 0 ? (
+                      <p className="rounded-2xl border border-[#E6DCCB] bg-white p-5 text-sm text-[#6F665C]">
+                        No reviews yet — be the first to review this product.
+                      </p>
+                    ) : (
+                      product.reviews.map((r) => (
+                        <div key={r.id} className="rounded-2xl border border-[#E6DCCB] bg-white p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="font-display font-semibold text-[#2A1F14]">{r.title}</p>
+                              <p className="text-xs text-[#6F665C]">
+                                {r.name} · {r.city} ·{" "}
+                                {r.date && !isNaN(new Date(r.date).getTime())
+                                  ? new Date(r.date).toLocaleDateString()
+                                  : "Recently"}
+                                {r.verified ? (
+                                  <span className="ml-1 font-semibold text-[#8B5E1A]">
+                                    Verified purchase
+                                  </span>
+                                ) : null}
+                              </p>
+                            </div>
+                            <div className="flex shrink-0">
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`size-3.5 ${
+                                    i < r.rating
+                                      ? "fill-[#C99A3A] text-[#C99A3A]"
+                                      : "text-[#D8CFC0]"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                          <p className="mt-2 text-sm text-[#6F665C]">{r.body}</p>
+                          {r.adminReply ? (
+                            <p className="mt-2 rounded-xl border border-[#E6DCCB] bg-[#FAF8F5] p-3 text-sm">
+                              <span className="font-semibold">Hijabi By Anayah:</span> {r.adminReply}
+                            </p>
+                          ) : null}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </SheetContent>
+              </Sheet>
             </div>
 
             <p className="text-[1.65rem] font-bold leading-tight text-[#8B5E1A]">
